@@ -9,8 +9,6 @@ const auth_interface_1 = require("../auth_interface");
 const jwterror_1 = require("../errors/jwterror");
 dotenv_1.default.config();
 class JWTService {
-    static instance;
-    encodedKey;
     constructor() {
         const secret = process.env.JWT_SECRET;
         if (!secret || secret.length < 32) {

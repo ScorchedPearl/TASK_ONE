@@ -1,19 +1,47 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 class UserService {
-    static verifyCredentialsToken(payload) {
+    static async verifyCredentialsToken(payload) {
+        console.log(payload.email);
+        return "mock-jwt-token";
     }
-    static getCurrentUser(id) {
+    static async getCurrentUser(id) {
+        console.log(id);
+        return {
+            id,
+            email: "u",
+            name: "T",
+            profileImageURL: null,
+            createdAt: new Date(),
+            updatedAt: new Date()
+        };
     }
-    static sendOtpEmail(email, otp) {
+    static async sendOtpEmail(email, otp) {
+        console.log(email, otp);
+        return true;
     }
-    static getAllUser(id) {
+    static async getAllUser(id) {
+        console.log(id);
+        return [{
+                id: "1",
+                email: "user1@example.com",
+                name: "User 1",
+                profileImageURL: null,
+                createdAt: new Date(),
+                updatedAt: new Date()
+            }];
     }
-    static createCredentialsToken(payload) {
+    static async createCredentialsToken(payload) {
+        console.log(payload.email);
+        return "mock-jwt-token";
     }
-    static verifyGoogleAuthToken(token) {
+    static async verifyGoogleAuthToken(token) {
+        console.log(token);
+        return "mock-jwt-token";
     }
-    static changePassword(email, newPassword) {
+    static async changePassword(email, newPassword) {
+        console.log(email);
+        return true;
     }
 }
 exports.default = UserService;

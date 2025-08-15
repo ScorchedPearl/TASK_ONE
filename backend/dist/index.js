@@ -36,9 +36,10 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const app_1 = require("./app");
 const dotenv = __importStar(require("dotenv"));
 dotenv.config();
-const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 8000;
+const PORT = process.env.PORT || 8000;
 async function init() {
-    await (0, app_1.initServer)(PORT);
+    const app = await (0, app_1.initServer)();
+    app.listen(PORT, '0.0.0.0', () => console.log(`server started at PORT: ${PORT}`));
 }
 init();
 //# sourceMappingURL=index.js.map

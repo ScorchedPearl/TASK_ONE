@@ -1,2 +1,2 @@
-export declare function initServer(PORT: number): Promise<void>;
+export declare const initServer: () => any;
 //# sourceMappingURL=index.d.ts.map

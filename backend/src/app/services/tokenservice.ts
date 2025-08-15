@@ -3,7 +3,8 @@ import JWTService from "./jwtservice";
 import type { User, TokenPair, JWTUser, JWTPayload } from "../auth_interface";
 import { JWTErrorType as ErrorType } from "../auth_interface";
 import { JWTError as JWTErrorClass } from "../errors/jwterror";
-
+import * as dotenv from "dotenv";
+dotenv.config();
 class TokenService {
   private static instance: TokenService;
   private readonly jwtService: JWTService;
@@ -38,7 +39,7 @@ class TokenService {
        tokenType: 'access',
        jti: tokenId,
        expiresAt: new Date(Date.now() + this.parseExpiryToSeconds(this.config.accessTokenExpiry) * 1000),
-       issuedAt: new Date(Date.now()*1000),
+       issuedAt: new Date(Date.now()),
        tokenId: tokenId
       };
 
@@ -49,7 +50,7 @@ class TokenService {
        tokenType: 'refresh',
        jti: `${tokenId}_refresh`,
        expiresAt: new Date(Date.now() + this.parseExpiryToSeconds(this.config.refreshTokenExpiry) * 1000),
-       issuedAt: new Date(Date.now()*1000),
+       issuedAt: new Date(Date.now()),
        tokenId: tokenId
       };
 
