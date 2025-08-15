@@ -25,7 +25,7 @@ export interface User{
  name: string;
  email: string;
  id: string;
- profileImage?: string;
+ profileImage?: string | undefined;
 }
 
 export interface TokenPair {
@@ -42,4 +42,15 @@ export enum JWTErrorType {
   INVALID_SIGNATURE = 'INVALID_SIGNATURE',
   MALFORMED_TOKEN = 'MALFORMED_TOKEN',
   MISSING_SECRET = 'MISSING_SECRET'
+}
+
+export interface AuthResult {
+  user: User;
+  tokens: TokenPair;
+}
+
+export interface PasswordResetToken {
+  userId: string;
+  token: string;
+  expiresAt: Date;
 }

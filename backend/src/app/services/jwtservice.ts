@@ -1,5 +1,5 @@
 import { SignJWT, jwtVerify } from "jose";
-import dotenv from "dotenv";
+import * as dotenv from "dotenv";
 import type { JWTVerifyResult } from "jose";
 import type { JWTUser, JWTPayload } from "../auth_interface";
 import { JWTErrorType as ErrorType } from "../auth_interface";

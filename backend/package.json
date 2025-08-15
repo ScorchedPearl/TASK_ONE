@@ -18,6 +18,7 @@
     "@types/cors": "^2.8.18",
     "@types/nodemailer": "^6.4.17",
     "axios": "^1.9.0",
+    "bcrypt": "^6.0.0",
     "body-parser": "^2.2.0",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
@@ -25,9 +26,11 @@
     "jose": "^6.0.11",
     "mongoose": "^8.17.1",
     "nodemailer": "^7.0.3",
+    "redis": "^5.8.1",
     "tsc-watch": "^7.1.1"
   },
   "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
     "@types/express-serve-static-core": "^5.0.7",
