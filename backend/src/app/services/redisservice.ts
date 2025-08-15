@@ -187,10 +187,6 @@ class RedisService {
       throw error;
     }
   }
-
-  /**
-   * Get JSON object
-   */
   public async getJson<T>(key: string): Promise<T | null> {
     try {
       const jsonString = await this.get(key);

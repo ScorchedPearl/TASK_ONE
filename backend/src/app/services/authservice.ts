@@ -4,23 +4,27 @@ import axios from 'axios';
 import User from '../schema/user';
 import TokenService from './tokenservice';
 import RedisService from './redisservice';
+import EmailService from './emailservice';
 import type { User as UserType, TokenPair, GoogleTokenResult, AuthResult, PasswordResetToken } from '../auth_interface';
 import type { CreateCredentialsTokenType, VerifyCredentialsTokenType } from '../user_interface';
 import { JWTError } from '../errors/jwterror';
 import { JWTErrorType } from '../auth_interface';
 
-
-
 class AuthService {
   private static instance: AuthService;
   private readonly tokenService: TokenService;
   private readonly redisService: RedisService;
+  private readonly emailService: EmailService;
   private readonly saltRounds = 12;
   private readonly RESET_TOKEN_PREFIX = 'password_reset:';
   private readonly RESET_TOKEN_EXPIRY = 30 * 60; 
+  private readonly PENDING_USER_PREFIX = 'pending_user:';
+  private readonly PENDING_USER_EXPIRY = 24 * 60 * 60; 
+
   private constructor() {
     this.tokenService = TokenService.getInstance();
     this.redisService = RedisService.getInstance();
+    this.emailService = EmailService.getInstance();
   }
 
   public static getInstance(): AuthService {
@@ -30,7 +34,7 @@ class AuthService {
     return AuthService.instance;
   }
 
-  public async registerWithCredentials(payload: CreateCredentialsTokenType): Promise<AuthResult> {
+  public async registerWithCredentials(payload: CreateCredentialsTokenType): Promise<{ message: string; email: string }> {
     try {
       const { email, password, name } = payload;
       const existingUser = await User.findOne({ email: email.toLowerCase() });
@@ -41,17 +45,77 @@ class AuthService {
           409
         );
       }
-
       const hashedPassword = await this.hashPassword(password.toString());
-      const newUser = new User({
+      const pendingUserData = {
         email: email.toLowerCase(),
         name: name.toString(),
         password: hashedPassword,
+        createdAt: new Date().toISOString()
+      };
+      const pendingKey = `${this.PENDING_USER_PREFIX}${email.toLowerCase()}`;
+      await this.redisService.setJson(pendingKey, pendingUserData, this.PENDING_USER_EXPIRY);
+
+      await this.emailService.sendVerificationEmail(email.toLowerCase(), name.toString());
+
+      return {
+        message: 'Registration initiated. Please check your email to verify your account.',
+        email: email.toLowerCase()
+      };
+    } catch (error) {
+      if (error instanceof JWTError) {
+        throw error;
+      }
+      console.error('Registration failed:', error);
+      throw new JWTError(
+        JWTErrorType.INVALID_TOKEN,
+        'Registration failed',
+        500
+      );
+    }
+  }
+
+  public async verifyEmailAndCompleteRegistration(token: string): Promise<AuthResult> {
+    try {
+   
+      const verificationResult = await this.emailService.verifyEmailToken(token);
+      if (!verificationResult) {
+        throw new JWTError(
+          JWTErrorType.INVALID_TOKEN,
+          'Invalid or expired verification token',
+          400
+        );
+      }
+
+      const { email } = verificationResult;
+
+
+      const pendingKey = `${this.PENDING_USER_PREFIX}${email}`;
+      const pendingUserData = await this.redisService.getJson<{
+        email: string;
+        name: string;
+        password: string;
+        createdAt: string;
+      }>(pendingKey);
+
+      if (!pendingUserData) {
+        throw new JWTError(
+          JWTErrorType.INVALID_TOKEN,
+          'Registration data not found or expired',
+          400
+        );
+      }
+      const newUser = new User({
+        email: pendingUserData.email,
+        name: pendingUserData.name,
+        password: pendingUserData.password,
         provider: 'credentials',
-        isEmailVerified: false
+        isEmailVerified: true
       });
 
       const savedUser = await newUser.save();
+
+      await this.redisService.del(pendingKey);
+
       const user: UserType = {
         id: savedUser._id.toString(),
         email: savedUser.email,
@@ -66,14 +130,51 @@ class AuthService {
       if (error instanceof JWTError) {
         throw error;
       }
-      console.error('Registration failed:', error);
+      console.error('Email verification failed:', error);
       throw new JWTError(
         JWTErrorType.INVALID_TOKEN,
-        'Registration failed',
+        'Email verification failed',
         500
       );
     }
   }
+
+  public async resendVerificationEmail(email: string): Promise<{ message: string }> {
+    try {
+      const pendingKey = `${this.PENDING_USER_PREFIX}${email.toLowerCase()}`;
+      const pendingUserData = await this.redisService.getJson<{
+        email: string;
+        name: string;
+        password: string;
+        createdAt: string;
+      }>(pendingKey);
+
+      if (!pendingUserData) {
+        throw new JWTError(
+          JWTErrorType.INVALID_TOKEN,
+          'No pending registration found for this email',
+          404
+        );
+      }
+
+      await this.emailService.sendVerificationEmail(email.toLowerCase(), pendingUserData.name);
+
+      return {
+        message: 'Verification email sent successfully'
+      };
+    } catch (error) {
+      if (error instanceof JWTError) {
+        throw error;
+      }
+      console.error('Resend verification email failed:', error);
+      throw new JWTError(
+        JWTErrorType.INVALID_TOKEN,
+        'Failed to resend verification email',
+        500
+      );
+    }
+  }
+
   public async signInWithCredentials(payload: VerifyCredentialsTokenType): Promise<AuthResult> {
     try {
       const { email, password } = payload;
@@ -96,6 +197,14 @@ class AuthService {
           JWTErrorType.INVALID_TOKEN,
           'Invalid email or password',
           401
+        );
+      }
+
+      if (!user.isEmailVerified) {
+        throw new JWTError(
+          JWTErrorType.INVALID_TOKEN,
+          'Please verify your email address before signing in',
+          403
         );
       }
 
@@ -153,6 +262,7 @@ class AuthService {
         });
         await user.save();
       }
+
       const userType: UserType = {
         id: user._id.toString(),
         email: user.email,
@@ -175,6 +285,7 @@ class AuthService {
       );
     }
   }
+
   public async refreshTokens(refreshToken: string): Promise<TokenPair> {
     try {
       return await this.tokenService.refreshAccessToken(refreshToken);
@@ -190,6 +301,7 @@ class AuthService {
       );
     }
   }
+
   public async getUserById(userId: string): Promise<UserType | null> {
     try {
       const user = await User.findById(userId);
@@ -255,6 +367,7 @@ class AuthService {
       });
 
       if (!user) {
+        // Don't reveal if user exists for security
         throw new JWTError(
           JWTErrorType.INVALID_TOKEN,
           'If this email exists, you will receive a reset link',
@@ -271,6 +384,9 @@ class AuthService {
 
       const redisKey = `${this.RESET_TOKEN_PREFIX}${resetToken}`;
       await this.redisService.setJson(redisKey, tokenData, this.RESET_TOKEN_EXPIRY);
+
+      // Send password reset email
+      await this.emailService.sendPasswordResetEmail(user.email, user.name, resetToken);
 
       return resetToken;
     } catch (error) {
@@ -337,6 +453,7 @@ class AuthService {
       );
     }
   }
+
   private async verifyGoogleToken(token: string): Promise<GoogleTokenResult> {
     try {
       const response = await axios.get(
@@ -366,59 +483,24 @@ class AuthService {
     return bcrypt.compare(password, hashedPassword);
   }
 
-  public async getUserResetTokens(userId: string): Promise<string[]> {
+  public async cleanupExpiredPendingUsers(): Promise<number> {
     try {
-      const pattern = `${this.RESET_TOKEN_PREFIX}*`;
+      const pattern = `${this.PENDING_USER_PREFIX}*`;
       const keys = await this.redisService.keys(pattern);
-      const userTokens: string[] = [];
+      let cleanedCount = 0;
 
       for (const key of keys) {
-        const tokenData = await this.redisService.getJson<PasswordResetToken>(key);
-        if (tokenData && tokenData.userId === userId) {
-          userTokens.push(tokenData.token);
-        }
-      }
-
-      return userTokens;
-    } catch (error) {
-      console.error('Get user reset tokens failed:', error);
-      return [];
-    }
-  }
-  public async revokeUserResetTokens(userId: string): Promise<number> {
-    try {
-      const pattern = `${this.RESET_TOKEN_PREFIX}*`;
-      const keys = await this.redisService.keys(pattern);
-      let revokedCount = 0;
-
-      for (const key of keys) {
-        const tokenData = await this.redisService.getJson<PasswordResetToken>(key);
-        if (tokenData && tokenData.userId === userId) {
+        const ttl = await this.redisService.ttl(key);
+        if (ttl <= 0) {
           await this.redisService.del(key);
-          revokedCount++;
+          cleanedCount++;
         }
       }
 
-      return revokedCount;
+      return cleanedCount;
     } catch (error) {
-      console.error('Revoke user reset tokens failed:', error);
+      console.error('Cleanup expired pending users failed:', error);
       return 0;
-    }
-  }
-
-  public async isResetTokenValid(resetToken: string): Promise<boolean> {
-    try {
-      const redisKey = `${this.RESET_TOKEN_PREFIX}${resetToken}`;
-      const tokenData = await this.redisService.getJson<PasswordResetToken>(redisKey);
-      
-      if (!tokenData) {
-        return false;
-      }
-
-      return new Date(tokenData.expiresAt) > new Date();
-    } catch (error) {
-      console.error('Check reset token validity failed:', error);
-      return false;
     }
   }
 

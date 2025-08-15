@@ -3,6 +3,7 @@ import AuthService from '../services/authservice';
 import AuthMiddleware from '../middleware/auth';
 import { JWTError } from '../errors/jwterror';
 import type { CreateCredentialsTokenType, VerifyCredentialsTokenType } from '../user_interface';
+
 const authRouter = Router();
 const authService = AuthService.getInstance();
 const authMiddleware = AuthMiddleware.getInstance();
@@ -10,6 +11,7 @@ const authMiddleware = AuthMiddleware.getInstance();
 authRouter.post('/register', async (req: Request, res: Response) => {
   try {
     const { email, password, name } = req.body;
+    
     if (!email || !password || !name) {
       return res.status(400).json({
         success: false,
@@ -25,19 +27,19 @@ authRouter.post('/register', async (req: Request, res: Response) => {
         code: 'WEAK_PASSWORD'
       });
     }
+
     const payload: CreateCredentialsTokenType = {
       email: email.trim(),
       password,
       name: name.trim()
     };
+
     const result = await authService.registerWithCredentials(payload);
-    res.status(201).json({
+    
+    res.status(200).json({
       success: true,
-      data: {
-        user: result.user,
-        tokens: result.tokens
-      },
-      message: 'User registered successfully'
+      data: result,
+      message: 'Registration initiated. Please check your email to verify your account.'
     });
 
   } catch (error) {
@@ -57,7 +59,84 @@ authRouter.post('/register', async (req: Request, res: Response) => {
   }
 });
 
-authRouter.post('/login',async (req: Request, res: Response) => {
+authRouter.post('/verify-email', async (req: Request, res: Response) => {
+  try {
+    const { token } = req.body;
+
+    if (!token) {
+      return res.status(400).json({
+        success: false,
+        error: 'Verification token is required',
+        code: 'MISSING_TOKEN'
+      });
+    }
+
+    const result = await authService.verifyEmailAndCompleteRegistration(token);
+
+    res.status(201).json({
+      success: true,
+      data: {
+        user: result.user,
+        tokens: result.tokens
+      },
+      message: 'Email verified successfully. Account created!'
+    });
+
+  } catch (error) {
+    if (error instanceof JWTError) {
+      return res.status(error.statusCode).json({
+        success: false,
+        error: error.message,
+        code: error.type
+      });
+    }
+    console.error('Email verification error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      code: 'SERVER_ERROR'
+    });
+  }
+});
+
+authRouter.post('/resend-verification', async (req: Request, res: Response) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        error: 'Email is required',
+        code: 'MISSING_EMAIL'
+      });
+    }
+
+    const result = await authService.resendVerificationEmail(email.trim());
+
+    res.status(200).json({
+      success: true,
+      data: result,
+      message: 'Verification email sent successfully'
+    });
+
+  } catch (error) {
+    if (error instanceof JWTError) {
+      return res.status(error.statusCode).json({
+        success: false,
+        error: error.message,
+        code: error.type
+      });
+    }
+    console.error('Resend verification error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      code: 'SERVER_ERROR'
+    });
+  }
+});
+
+authRouter.post('/login', async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
 
@@ -264,6 +343,7 @@ authRouter.post('/change-password', authMiddleware.authenticate, async (req: Req
     });
   }
 });
+
 authRouter.post('/forgot-password', async (req: Request, res: Response) => {
   try {
     const { email } = req.body;
@@ -276,24 +356,15 @@ authRouter.post('/forgot-password', async (req: Request, res: Response) => {
       });
     }
 
-    const resetToken = await authService.generatePasswordResetToken(email.trim());
+    await authService.generatePasswordResetToken(email.trim());
 
-    // In production, send this token via email instead of returning it
+    // Always return success for security (don't reveal if email exists)
     res.status(200).json({
       success: true,
-      data: { resetToken }, // Remove this in production
       message: 'If this email exists, you will receive a reset link'
     });
 
   } catch (error) {
-    if (error instanceof JWTError) {
-      return res.status(error.statusCode).json({
-        success: false,
-        error: error.message,
-        code: error.type
-      });
-    }
-
     console.error('Forgot password error:', error);
     res.status(500).json({
       success: false,
@@ -303,7 +374,7 @@ authRouter.post('/forgot-password', async (req: Request, res: Response) => {
   }
 });
 
-authRouter.post('/reset-password',async (req: Request, res: Response) => {
+authRouter.post('/reset-password', async (req: Request, res: Response) => {
   try {
     const { resetToken, newPassword } = req.body;
 
@@ -354,13 +425,6 @@ authRouter.post('/reset-password',async (req: Request, res: Response) => {
       code: 'SERVER_ERROR'
     });
   }
-});
-
-authRouter.post('/logout', authMiddleware.optionalAuthenticate, async (req: Request, res: Response) => {
-  res.status(200).json({
-    success: true,
-    message: 'Logged out successfully'
-  });
 });
 
 export default authRouter;
