@@ -1,0 +1,2 @@
+export declare const mutations = "#graphql\n    verifyGoogleToken(token:String!): String\n    createCredentialsToken(email:String!,password:String!,name:String!): String\n    changePassword(email:String!,newPassword:String!):Boolean\n";
+//# sourceMappingURL=mutation.d.ts.map

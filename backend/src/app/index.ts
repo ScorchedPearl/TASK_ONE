@@ -1,42 +1,45 @@
-import express from "express"
-import bodyParser from "body-parser"
-import cors from "cors"
-import { ApolloServer } from '@apollo/server';
-import { expressMiddleware } from "@as-integrations/express4";
-import type { Express } from "express";
+import { ApolloServer } from "@apollo/server";
+import { startStandaloneServer } from "@apollo/server/standalone";
 import JWTService from "./services/jwtservice";
 import TokenService from "./services/tokenservice";
-export async function initServer(): Promise<Express>{
-  const app=express();
-  app.use(cors());
-  app.use(bodyParser.json());
-  const server=new ApolloServer({
-   typeDefs:`
-   type Query{
-     
-   }
-   type Mutation{
-     
-   }
+import { User } from "./user";
+
+export async function initServer(PORT: number) {
+  const server = new ApolloServer({
+   introspection: true,
+    typeDefs: `
+      ${User.Types}
+      type Query {
+        ${User.queries}
+      }
+      type Mutation {
+        ${User.mutations}
+      }
     `,
-    resolvers:{
-      Query:{
-       
-       },
-       Mutation:{
-        
-       },
-       
+    resolvers: {
+      Query: {
+        ...User.resolvers.queries,
+      },
+      Mutation: {
+        ...User.resolvers.mutations,
+      },
     },
   });
-  await server.start();
-  app.use("/graphql", expressMiddleware(server, {
+
+  const { url } = await startStandaloneServer(server, {
+    listen: { port: PORT },
     context: async ({ req }) => {
+      const authHeader = req.headers.authorization || "";
+      const token = TokenService.getInstance().extractTokenFromHeader(authHeader);
+      const user = token ? await JWTService.getInstance().decode(token) : null;
+
       return {
-        user: req.headers.authorization ? await JWTService.getInstance().decode(
-         TokenService.getInstance().extractTokenFromHeader(req.headers.authorization) || '') : null,
+        user,
+        JWTService: JWTService.getInstance(),
+        TokenService: TokenService.getInstance(),
       };
-    }
-  }) as unknown as express.RequestHandler);
-  return app;
+    },
+  });
+
+  console.log(`🚀 Server ready at ${url}`);
 }

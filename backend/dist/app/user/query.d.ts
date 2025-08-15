@@ -1,0 +1,2 @@
+export declare const queries = "#graphql\n verifyCredentialsToken(email:String!,password:String!): String\n getCurrentUser: User\n getAllUser:[User]\n sendOtpEmail(email:String!,otp:String!):Boolean\n";
+//# sourceMappingURL=query.d.ts.map
