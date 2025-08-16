@@ -54,10 +54,11 @@ const UserContext = createContext<UserContextType>({
 });
 
 export const UserProvider = ({ children }: { children: React.ReactNode }) => {
+ try{
   const { currentUser, isLoading } = useCurrentUser();
   const [googleAccessToken, setGoogleAccessToken] = useState<string | null>(null);
 
-  const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+  const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
 
  
   const storeTokens = (tokens: TokenPair) => {
@@ -291,6 +292,10 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
       {children}
     </UserContext.Provider>
   );
+  } catch (error) {
+    console.error("Error in UserProvider:", error);
+    return <div>Something went wrong in UserProvider</div>;
+  }
 };
 
 export const useUser = () => useContext(UserContext);
