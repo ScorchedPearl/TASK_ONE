@@ -12,8 +12,6 @@ interface UserContextType {
   isLoading: boolean;
   googleAccessToken: string | null;
   googleAuth: (token: string) => Promise<string>;
-  generateOTP: () => string;
-  sendOTP: (email: string) => Promise<string>;
   changePassword: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, name: string) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
@@ -25,8 +23,6 @@ const UserContext = createContext<UserContextType>({
   isLoading: true,
   googleAccessToken: null,
   googleAuth: () => Promise.resolve(""),
-  generateOTP: () => "",
-  sendOTP: async () => Promise.resolve(""),
   changePassword: async () => Promise.resolve(),
   signUp: async () => Promise.resolve(),
   signIn: async () => Promise.resolve(),
@@ -66,27 +62,6 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
 
   function generateOTP() {
     return Math.floor(100000 + Math.random() * 900000).toString();
-  }
-
-  async function sendOTP(email: string) {
-    const otp = generateOTP();
-    localStorage.setItem("currentOtp", otp);
-    const message = `Your OTP is ${otp}. Thank You For Registering With MarcelPearl`;
-
-    const response = await axios.post(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/auth/otpVerification`, {
-      email,
-      otp: message,
-    }, {
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (response.status !== 200) {
-      throw new Error("Failed to send OTP");
-    }
-
-    return "OTP sent to email";
   }
 
   async function signUp(email: string, password: string, name: string) {
@@ -156,8 +131,6 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
         isLoading,
         googleAccessToken,
         googleAuth,
-        generateOTP,
-        sendOTP,
         changePassword,
         signUp,
         signIn,
