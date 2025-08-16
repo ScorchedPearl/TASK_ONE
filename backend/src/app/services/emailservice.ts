@@ -154,7 +154,7 @@ class EmailService {
               </p>
               <div style="border-top: 1px solid #eeeeee; margin-top: 30px; padding-top: 20px;">
                 <p style="color: #999999; font-size: 12px; text-align: center;">
-                  © 2025 GeekHeaven. All rights reserved.
+                  © 2025 Pearl. All rights reserved.
                 </p>
               </div>
             </div>
@@ -197,7 +197,7 @@ class EmailService {
               </p>
               <div style="border-top: 1px solid #eeeeee; margin-top: 30px; padding-top: 20px;">
                 <p style="color: #999999; font-size: 12px; text-align: center;">
-                  © 2025 GeekHeaven. All rights reserved.
+                  © 2025 Pearl. All rights reserved.
                 </p>
               </div>
             </div>

@@ -23,5 +23,5 @@ const userBookmarkSchema = new Schema<IUserBookmark>({
 }, {
   timestamps: true
 });
-
+userBookmarkSchema.index({ userId: 1, questionId: 1 }, { unique: true });
 export const UserBookmark = mongoose.model<IUserBookmark>('UserBookmark', userBookmarkSchema);

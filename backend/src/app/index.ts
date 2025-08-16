@@ -6,6 +6,7 @@ import RedisService from "./services/redisservice";
 import authRouter from "./routes/auth";
 import EmailService from "./services/emailservice";
 import * as dotenv from "dotenv";
+import contentRouter from "./routes/content";
 dotenv.config();
 
 export const initServer: () => any = async () => {
@@ -26,5 +27,6 @@ export const initServer: () => any = async () => {
   }));
   app.use(bodyParser.json())
   app.use('/api/auth', authRouter);
+  app.use('/api/content',contentRouter);
   return app;
 }

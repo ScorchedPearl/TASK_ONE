@@ -41,7 +41,7 @@ class ContentService {
     const query: any = {};
     
     if (search) {
-      query.$text = { $search: search };
+      query.title = { $regex: search, $options: 'i' };
     }
     
     if (difficulty) {
@@ -90,6 +90,7 @@ class ContentService {
       progressData.forEach(p => userProgress.set(p.questionId.toString(), p));
       bookmarkData.forEach(b => userBookmarks.add(b.questionId.toString()));
     }
+
     const formattedQuestions = questions.map(q => {
       const category = q.category as any; 
       return {

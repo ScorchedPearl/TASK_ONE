@@ -42,6 +42,9 @@ const questionSchema = new Schema<IQuestion>({
   timestamps: true
 });
 
+questionSchema.index({ title: 1 }); 
+questionSchema.index({ difficulty: 1 });
+questionSchema.index({ category: 1 });
 
 const Question = mongoose.model<IQuestion>('Question', questionSchema);
 export default Question;
