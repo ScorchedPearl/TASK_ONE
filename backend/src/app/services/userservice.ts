@@ -156,33 +156,6 @@ class UserService {
       return false;
     }
   }
-
-  public static async getUserStats() {
-    try {
-      const [
-        totalUsers,
-        credentialUsers,
-        googleUsers,
-        verifiedUsers
-      ] = await Promise.all([
-        User.countDocuments(),
-        User.countDocuments({ provider: 'credentials' }),
-        User.countDocuments({ provider: 'google' }),
-        User.countDocuments({ isEmailVerified: true })
-      ]);
-
-      return {
-        totalUsers,
-        credentialUsers,
-        googleUsers,
-        verifiedUsers,
-        unverifiedUsers: totalUsers - verifiedUsers
-      };
-    } catch (error) {
-      console.error('Get user stats failed:', error);
-      throw error;
-    }
-  }
 }
 
 export default UserService;

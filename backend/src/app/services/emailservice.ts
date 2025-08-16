@@ -54,7 +54,7 @@ class EmailService {
       const redisKey = `${this.EMAIL_VERIFICATION_PREFIX}${verificationToken}`;
       await this.redisService.setJson(redisKey, verificationData, this.EMAIL_VERIFICATION_EXPIRY);
 
-      const verificationUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/verify-email?token=${verificationToken}`;
+      const verificationUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/verify-email?token=${verificationToken}`;
 
       const emailTemplate = this.getVerificationEmailTemplate(name, verificationUrl);
 
