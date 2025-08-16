@@ -1,0 +1,50 @@
+version: '3.8'
+services:
+  mongo:
+    image: mongo:7.0
+    restart: always
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+    volumes:
+      - mongo-data:/data/db
+
+  redis:
+    image: redis:latest
+    restart: always
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--requirepass", "yourpassword"]
+    environment:
+      REDIS_PASSWORD: yourpassword
+    volumes:
+      - redis-data:/data
+
+  backend:
+    build: .
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      JWT_SECRET: my-super-safe-geekheaven-secret-vishwas
+      PORT: 8000
+      MONGODB_URL: mongodb://root:example@mongo:27017/geekheaven
+      JWT_ACCESS_EXPIRY: 15m
+      JWT_REFRESH_EXPIRY: 7d
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: yourpassword
+      REDIS_DB: 0
+      APP_PASSWORD: egjvzollbsxedjni
+      FRONTEND_URL: http://localhost:5173
+    depends_on:
+      - mongo
+      - redis
+
+volumes:
+  mongo-data:
+    driver: local
+  redis-data:
+    driver: local
