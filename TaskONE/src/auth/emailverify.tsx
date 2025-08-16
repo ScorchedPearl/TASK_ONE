@@ -116,7 +116,6 @@ export default function EmailVerificationPage() {
                     Back to Login
                   </Button>
                 )}
-                
                 {status !== 'loading' && (
                   <Button
                     onClick={handleGoToLogin}
