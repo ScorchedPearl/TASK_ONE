@@ -14,12 +14,13 @@ export const currentUserFetcher = async (): Promise<User | null> => {
     });
 
     if (response.status === 200) {
-      const { name, email } = response.data;
+      console.log("User data fetched successfully:", response);
+      const { name, email,profileImage } = response.data.data.user;
 
       return {
         name,
         email,
-        avatar: "/placeholder.svg", 
+        profileImage: profileImage || '', 
       };
     }
     return null;

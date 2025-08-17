@@ -1,6 +1,43 @@
 import User from '../schema/user';
 
 class UserService {
+  public static async updateUser(
+  userId: string,
+  updateData: {
+    name?: string;
+    profileImage?: string;
+  }
+) {
+  try {
+    const user = await User.findByIdAndUpdate(
+      userId,
+      {
+        ...updateData,
+        updatedAt: new Date()
+      },
+      { new: true, runValidators: true }
+    ).select('-password');
+
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    return {
+      id: user._id.toString(),
+      email: user.email,
+      name: user.name,
+      profileImageURL: user.profileImage,
+      isEmailVerified: user.isEmailVerified,
+      provider: user.provider,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt
+    };
+  } catch (error) {
+    console.error('Update user failed:', error);
+    throw error;
+  }
+}
+
   public static async getCurrentUser(id: string) {
     try {
       const user = await User.findById(id).select('-password');

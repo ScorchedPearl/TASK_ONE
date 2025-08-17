@@ -78,6 +78,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
 
       if (response.data?.success && response.data?.data?.tokens) {
         const { tokens }: { tokens: TokenPair } = response.data.data;
+        console.log(tokens);
         storeTokens(tokens);
         localStorage.setItem('__Google_Access_Token__', token);
         setGoogleAccessToken(token);

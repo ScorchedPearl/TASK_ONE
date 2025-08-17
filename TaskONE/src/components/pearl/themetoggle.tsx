@@ -24,7 +24,7 @@ export const ThemeToggle = () => {
       variant="ghost" 
       size="icon" 
       onClick={toggleTheme}
-      className="theme-toggle"
+      className="hover:bg-slate-800 border-white border-1"
     >
       {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
     </Button>

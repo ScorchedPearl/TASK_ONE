@@ -29,7 +29,7 @@ export default function Auth() {
   const [showEmailSent, setShowEmailSent] = useState(false);
   const [emailSentFor, setEmailSentFor] = useState<'registration' | 'reset' | null>(null);
   const [userEmail, setUserEmail] = useState("");
-  const navigate = () => console.log('Navigate called');
+  const navigate = useNavigate();
 
   const {
     register,
@@ -48,6 +48,12 @@ export default function Auth() {
     forgotPassword,
     resendVerification 
   } = useUser();
+
+  useEffect(() => {
+    if (currentUser) {
+      navigate('/flow');
+    }
+  }, [currentUser, navigate]);
 
   const onSubmit = async (data: { 
     email?: string; 
@@ -73,7 +79,7 @@ export default function Auth() {
         if (password !== data.confirmPassword) {
           setError("confirmPassword", {
             type: "manual",
-            message: "Recipe ingredients don't match",
+            message: "Passwords don't match",
           });
           return;
         }
@@ -86,7 +92,6 @@ export default function Auth() {
         const email = data.email as string;
         const password = data.password as string;
         await signIn(email, password);
-        navigate();
       }
     } catch (error: any) {
       console.error("Auth error:", error);
@@ -100,14 +105,22 @@ export default function Auth() {
           type: "manual",
           message: error.message
         });
-      } else {
+      } else if(error.message?.includes('exists')) {
+        setError("email", {
+          type: "manual",
+          message: "Email already exists. Please sign in."
+        });
+      }
+      else{
         setError("root", {
           type: "manual",
-          message: error.message || "Kitchen mishap occurred. Please try again."
+          message: error.message || "An error occurred. Please try again."
         });
       }
     } finally {
       setIsLoading(false);
+      
+      
     }
   };
 
@@ -116,12 +129,11 @@ export default function Auth() {
       setIsLoading(true);
       try {
         const token = await googleAuth(cred.access_token);
-        navigate();
       } catch (error) {
         console.error("Google login failed:", error);
         setError("root", {
           type: "manual",
-          message: "Chef's special unavailable. Please try again."
+          message: "Google authentication failed. Please try again."
         });
       } finally {
         setIsLoading(false);
@@ -130,7 +142,7 @@ export default function Auth() {
     onError: () => {
       setError("root", {
         type: "manual",
-        message: "Chef's special unavailable. Please try again."
+        message: "Google authentication failed. Please try again."
       });
     },
     scope: "openid profile email"
@@ -147,7 +159,7 @@ export default function Auth() {
     } catch (error: any) {
       setError("root", {
         type: "manual",
-        message: error.message || "Failed to serve your request"
+        message: error.message || "Failed to resend email"
       });
     } finally {
       setIsLoading(false);
@@ -166,13 +178,11 @@ export default function Auth() {
 
   if (showEmailSent) {
     return (
-      <div className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-b from-slate-900 to-slate-800 text-white">
-        {/* Background Grid Pattern */}
+      <div className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-b from-slate-900 to-slate-800 dark:from-slate-950 dark:to-slate-900 text-white">
         <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff0a_1px,transparent_1px),linear-gradient(to_bottom,#ffffff0a_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_110%)]" />
+          <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff22_1px,transparent_1px),linear-gradient(to_bottom,#ffffff22_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_110%)]" />
         </div>
 
-        {/* Floating Culinary Icons */}
         <div className="absolute top-20 left-20 opacity-80">
           <Utensils className="w-8 h-8 text-primary/30" />
         </div>
@@ -183,28 +193,28 @@ export default function Auth() {
           <Sparkles className="w-12 h-12 text-primary/20" />
         </div>
 
-        <Card className="w-[400px] bg-slate-900/50 backdrop-blur-xl border border-primary/20 shadow-xl rounded-lg">
+        <Card className="w-[400px] bg-slate-900/50 dark:bg-slate-950/50 backdrop-blur-xl  shadow-xl rounded-lg border border-slate-700">
           <div className="p-6 space-y-6 text-center">
             <div className="space-y-4">
               <div className="flex justify-center">
-                <div className="bg-primary/20 p-3 rounded-full">
-                  <Mail className="w-8 h-8 text-primary" />
+                <div className=" p-3 rounded-full">
+                  <Mail className="w-8 h-8 text-white" />
                 </div>
               </div>
               
-              <h2 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-primary to-teal-400 bg-clip-text text-transparent">
-                Recipe Delivered
+              <h2 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-teal-500 to-teal-400 bg-clip-text text-transparent">
+                Email Sent
               </h2>
               
-              <p className="text-sm text-slate-300">
-                We've served your {emailSentFor === 'registration' ? 'welcome menu' : 'recipe reset'} to{' '}
+              <p className="text-sm text-slate-300 dark:text-slate-400">
+                We've sent you a {emailSentFor === 'registration' ? 'verification' : 'password reset'} email to{' '}
                 <span className="text-primary font-medium">{userEmail}</span>
               </p>
               
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-slate-400 dark:text-slate-500">
                 {emailSentFor === 'registration' 
-                  ? "Please taste your welcome course and confirm your reservation."
-                  : "Please follow the recipe to craft your new dining credentials."
+                  ? "Please check your email and click the verification link to complete your registration."
+                  : "Please check your email and follow the instructions to reset your password."
                 }
               </p>
             </div>
@@ -214,17 +224,17 @@ export default function Auth() {
                 onClick={handleResendEmail}
                 disabled={isLoading}
                 variant="outline"
-                className="w-full bg-slate-800/50 border border-primary/30 hover:bg-slate-700/50 text-white"
+                className="w-full bg-slate-800/50 dark:bg-slate-900/50 border border-slate-700 hover:bg-slate-700/50 dark:hover:bg-slate-800/50 text-white "
               >
-                {isLoading ? "Preparing..." : "Serve Again"}
+                {isLoading ? "Sending..." : "Resend Email"}
               </Button>
               
               <Button
                 onClick={resetForm}
                 variant="link"
-                className="w-full text-slate-400 hover:text-primary transition-colors"
+                className="w-full text-slate-400 dark:text-slate-500 hover:text-primary transition-colors border-slate-700"
               >
-                Return to Dining Hall
+                Back to Login
               </Button>
             </div>
 
@@ -240,27 +250,26 @@ export default function Auth() {
   }
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-b from-slate-900 to-slate-800 text-white">
-      {/* Background Grid Pattern */}
+    <div className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-b from-slate-900 to-slate-800 dark:from-slate-950 dark:to-slate-900 text-white">
       <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff0a_1px,transparent_1px),linear-gradient(to_bottom,#ffffff0a_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_110%)]" />
-      </div>
+          <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff22_1px,transparent_1px),linear-gradient(to_bottom,#ffffff22_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_110%)]" />
+        </div>
 
-      {/* Floating Culinary Icons */}
+
       <div className="absolute top-20 left-20 opacity-80">
-        <ChefHat className="w-10 h-10 text-primary/30" />
+        <ChefHat className="w-10 h-10 " />
       </div>
       <div className="absolute top-40 right-32 opacity-70">
-        <Sparkles className="w-8 h-8 text-primary/30" />
+        <Sparkles className="w-8 h-8 " />
       </div>
       <div className="absolute bottom-32 left-32 opacity-60">
-        <Star className="w-12 h-12 text-primary/20" />
+        <Star className="w-12 h-12 " />
       </div>
       <div className="absolute bottom-20 right-20 opacity-50">
-        <Utensils className="w-6 h-6 text-primary/25" />
+        <Utensils className="w-6 h-6 " />
       </div>
 
-      <Card className="w-[400px] bg-slate-900/50 backdrop-blur-xl border border-primary/20 shadow-xl rounded-lg">
+      <Card className="w-[400px] bg-slate-900/50 dark:bg-slate-950/50 backdrop-blur-xl shadow-xl border border-slate-700">
         <div className="p-6 space-y-6">
           <div className="space-y-2 text-center">
             <div className="flex justify-center mb-4">
@@ -269,19 +278,19 @@ export default function Auth() {
               </div>
             </div>
             
-            <h2 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-primary to-teal-400 bg-clip-text text-transparent">
+            <h2 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-teal-600 to-teal-400 bg-clip-text text-transparent">
               {isForgotPassword
-                ? "Recipe Recovery"
+                ? "Reset Password"
                 : isSignUp
-                ? "Join Our Kitchen"
-                : "Welcome Back, Chef"}
+                ? "Create Account"
+                : "Welcome Back"}
             </h2>
-            <p className="text-sm text-slate-300">
+            <p className="text-sm text-slate-300 dark:text-slate-400">
               {isForgotPassword
-                ? "Enter your details to recover your culinary credentials"
+                ? "Enter your email to receive a password reset link"
                 : isSignUp
-                ? "Create your chef profile for an exquisite dining experience"
-                : "Sign in to continue your elegant culinary journey"}
+                ? "Join GeekHeaven and start your coding journey"
+                : "Sign in to continue your coding interview preparation"}
             </p>
           </div>
 
@@ -296,7 +305,7 @@ export default function Auth() {
                 <Button
                   type="button"
                   variant="outline"
-                  className="w-full flex items-center justify-center gap-3 bg-slate-800/50 border border-primary/30 hover:bg-slate-700/50 text-white py-3 rounded-lg"
+                  className="w-full flex items-center justify-center gap-3 bg-slate-800/50 dark:bg-slate-900/50  hover:bg-slate-700/50 dark:hover:bg-slate-800/50 text-white py-3 rounded-lg border border-slate-700 dark:border-slate-600"
                   onClick={() => googlelogin()}
                   disabled={isLoading}
                 >
@@ -320,8 +329,8 @@ export default function Auth() {
                       d="M12 4.8c1.7 0 3.2.6 4.4 1.7L19.5 4C17.5 2.2 14.9 1 12 1 8.4 1 5.1 3.2 3.4 6.7l3.4 2.6C7 6.8 9.3 4.8 12 4.8z"
                     />
                   </svg>
-                  <span className="text-white font-medium">
-                    Chef's Special Access
+                  <span className="text-white font-medium ">
+                    Continue with Google
                   </span>
                 </Button>
               </motion.div>
@@ -329,10 +338,10 @@ export default function Auth() {
           </AnimatePresence>
 
           {!isForgotPassword && !isSignUp && (
-            <div className="text-center text-slate-400 text-sm flex items-center">
-              <div className="flex-1 h-px bg-slate-700"></div>
-              <span className="px-3">or continue with credentials</span>
-              <div className="flex-1 h-px bg-slate-700"></div>
+            <div className="text-center text-slate-400 dark:text-slate-500 text-sm flex items-center">
+              <div className="flex-1 h-px bg-slate-700 dark:bg-slate-600"></div>
+              <span className="px-3">or continue with email</span>
+              <div className="flex-1 h-px bg-slate-700 dark:bg-slate-600"></div>
             </div>
           )}
 
@@ -345,8 +354,8 @@ export default function Auth() {
                   exit={{ opacity: 0, y: -20 }}
                   className="space-y-2"
                 >
-                  <Label htmlFor="name" className="text-sm text-slate-300">
-                    Chef Name
+                  <Label htmlFor="name" className="text-sm text-slate-300 dark:text-slate-400">
+                    Full Name
                   </Label>
                   <div className="relative">
                     <UserIcon
@@ -356,8 +365,8 @@ export default function Auth() {
                     <Input
                       id="name"
                       {...register("name")}
-                      className="pl-10 bg-slate-800/50 border border-slate-700 text-white py-3 rounded-lg focus:border-primary focus:ring-1 focus:ring-primary"
-                      placeholder="Enter your chef name"
+                      className="pl-10 bg-slate-800/50 dark:bg-slate-900/50 border border-slate-700 dark:border-slate-600 text-white py-3 rounded-lg focus:border-primary focus:ring-1 focus:ring-primary"
+                      placeholder="Enter your full name"
                       required
                     />
                   </div>
@@ -369,7 +378,7 @@ export default function Auth() {
             </AnimatePresence>
 
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-sm text-slate-300">
+              <Label htmlFor="email" className="text-sm text-slate-300 dark:text-slate-400">
                 Email Address
               </Label>
               <div className="relative">
@@ -381,7 +390,7 @@ export default function Auth() {
                   id="email"
                   {...register("email")}
                   type="email"
-                  className="pl-10 bg-slate-800/50 border border-slate-700 text-white py-3 rounded-lg focus:border-primary focus:ring-1 focus:ring-primary"
+                  className="pl-10 bg-slate-800/50 dark:bg-slate-900/50 border border-slate-700 dark:border-slate-600 text-white py-3 rounded-lg focus:border-slate-600 focus:ring-1 focus:ring-primary"
                   placeholder="Enter your email"
                   required
                 />
@@ -393,8 +402,8 @@ export default function Auth() {
 
             {!isForgotPassword && (
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-sm text-slate-300">
-                  {isSignUp ? "Create Password" : "Password"}
+                <Label htmlFor="password" className="text-sm text-slate-300 dark:text-slate-400">
+                  {isSignUp ? "Password" : "Password"}
                 </Label>
                 <div className="relative">
                   <LockIcon
@@ -405,7 +414,7 @@ export default function Auth() {
                     id="password"
                     {...register("password")}
                     type="password"
-                    className="pl-10 bg-slate-800/50 border border-slate-700 text-white py-3 rounded-lg focus:border-primary focus:ring-1 focus:ring-primary"
+                    className="pl-10 bg-slate-800/50 dark:bg-slate-900/50 border border-slate-700 dark:border-slate-600 text-white py-3 rounded-lg focus:border-slate-600 focus:ring-1 focus:ring-primary"
                     placeholder={isSignUp ? "Create a secure password" : "Enter your password"}
                     required
                   />
@@ -424,8 +433,8 @@ export default function Auth() {
                   exit={{ opacity: 0, y: 20 }}
                   className="space-y-2"
                 >
-                  <Label htmlFor="confirmPassword" className="text-sm text-slate-300">
-                    Confirm Recipe
+                  <Label htmlFor="confirmPassword" className="text-sm text-slate-300 dark:text-slate-400">
+                    Confirm Password
                   </Label>
                   <div className="relative">
                     <LockIcon
@@ -436,7 +445,7 @@ export default function Auth() {
                       id="confirmPassword"
                       {...register("confirmPassword")}
                       type="password"
-                      className="pl-10 bg-slate-800/50 border border-slate-700 text-white py-3 rounded-lg focus:border-primary focus:ring-1 focus:ring-primary"
+                      className="pl-10 bg-slate-800/50 dark:bg-slate-900/50 border border-slate-700 dark:border-slate-600 text-white py-3 rounded-lg focus:border-slate-600 focus:ring-1 focus:ring-primary"
                       placeholder="Confirm your password"
                       required
                     />
@@ -453,21 +462,20 @@ export default function Auth() {
             <Button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-gradient-to-r from-primary to-teal-400 text-primary-foreground font-bold px-8 py-3 text-lg flex items-center justify-center hover:opacity-90 transition-opacity rounded-lg"
+              className="w-full bg-gradient-to-r from-teal-600 to-teal-400 text-slate-200  px-8 py-3 text-lg flex items-center justify-center hover:opacity-90 transition-opacity rounded-lg"
             >
               {isLoading ? (
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
-                  Preparing...
+                  Processing...
                 </div>
               ) : (
                 <>
-                  <ChefHat className="w-4 h-4 mr-2" />
                   {isForgotPassword
-                    ? "Send Recovery Recipe"
+                    ? "Send Reset Link"
                     : isSignUp
-                    ? "Begin Culinary Journey" 
-                    : "Enter Kitchen"}
+                    ? "Create Account" 
+                    : "Sign In"}
                 </>
               )}
             </Button>
@@ -482,24 +490,24 @@ export default function Auth() {
           <div className="flex flex-col gap-2">
             <Button
               variant="link"
-              className="w-full text-slate-400 hover:text-primary transition-colors"
+              className="w-full text-slate-400 dark:text-slate-500 hover:text-primary transition-colors"
               onClick={() => {
                 setIsForgotPassword(false);
                 setIsSignUp(!isSignUp);
               }}
             >
               {isSignUp
-                ? "Already have a chef profile? Welcome back"
-                : "New to our kitchen? Join the experience"}
+                ? "Already have an account? Sign in"
+                : "Don't have an account? Sign up"}
             </Button>
 
             {!isSignUp && (
               <Button
                 variant="link"
-                className="w-full text-slate-400 hover:text-primary transition-colors"
+                className="w-full text-slate-400 dark:text-slate-500 hover:text-primary transition-colors"
                 onClick={() => setIsForgotPassword(!isForgotPassword)}
               >
-                {isForgotPassword ? "Return to sign in" : "Lost your recipe?"}
+                {isForgotPassword ? "Back to sign in" : "Forgot your password?"}
               </Button>
             )}
           </div>

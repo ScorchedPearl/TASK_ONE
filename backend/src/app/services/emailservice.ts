@@ -59,7 +59,7 @@ class EmailService {
       const emailTemplate = this.getVerificationEmailTemplate(name, verificationUrl);
 
       await this.transporter.sendMail({
-        from: `"GeekHeaven" <${process.env.EMAIL_USER || 'noreply@geekheaven.com'}>`,
+        from: `"PearlChef" <${process.env.EMAIL_USER || 'noreply@pearlchef.com'}>`,
         to: email,
         subject: emailTemplate.subject,
         text: emailTemplate.text,
@@ -110,7 +110,7 @@ class EmailService {
       const emailTemplate = this.getPasswordResetEmailTemplate(name, resetUrl);
 
       await this.transporter.sendMail({
-        from: `"GeekHeaven" <${process.env.EMAIL_USER || 'noreply@geekheaven.com'}>`,
+        from: `"PearlChef" <${process.env.EMAIL_USER || 'noreply@pearlchef.com'}>`,
         to: email,
         subject: emailTemplate.subject,
         text: emailTemplate.text,
@@ -124,8 +124,8 @@ class EmailService {
 
   private getVerificationEmailTemplate(name: string, verificationUrl: string): EmailTemplate {
     return {
-      subject: 'Verify your GeekHeaven account',
-      text: `Hi ${name},\n\nPlease verify your email address by clicking the link below:\n${verificationUrl}\n\nThis link will expire in 24 hours.\n\nIf you didn't create this account, please ignore this email.\n\nBest regards,\nGeekHeaven Team`,
+      subject: 'Verify your PearlChef account',
+      text: `Hi ${name},\n\nPlease verify your email address by clicking the link below:\n${verificationUrl}\n\nThis link will expire in 24 hours.\n\nIf you didn't create this account, please ignore this email.\n\nBest regards,\PearlChef Team`,
       html: `
         <!DOCTYPE html>
         <html>
@@ -137,12 +137,12 @@ class EmailService {
         <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;">
           <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
             <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px; text-align: center;">
-              <h1 style="color: #ffffff; margin: 0; font-size: 28px;">GeekHeaven</h1>
+              <h1 style="color: #ffffff; margin: 0; font-size: 28px;">PearlChef</h1>
             </div>
             <div style="padding: 40px;">
               <h2 style="color: #333333; margin-bottom: 20px;">Hi ${name}!</h2>
               <p style="color: #666666; font-size: 16px; line-height: 1.5; margin-bottom: 30px;">
-                Welcome to GeekHeaven! Please verify your email address to complete your account setup.
+                Welcome to PearlChef! Please verify your email address to complete your account setup.
               </p>
               <div style="text-align: center; margin: 30px 0;">
                 <a href="${verificationUrl}" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-size: 16px; font-weight: bold; display: inline-block;">
@@ -167,8 +167,8 @@ class EmailService {
 
   private getPasswordResetEmailTemplate(name: string, resetUrl: string): EmailTemplate {
     return {
-      subject: 'Reset your GeekHeaven password',
-      text: `Hi ${name},\n\nYou requested to reset your password. Click the link below to set a new password:\n${resetUrl}\n\nThis link will expire in 30 minutes.\n\nIf you didn't request this, please ignore this email.\n\nBest regards,\nGeekHeaven Team`,
+      subject: 'Reset your PearlChef password',
+      text: `Hi ${name},\n\nYou requested to reset your password. Click the link below to set a new password:\n${resetUrl}\n\nThis link will expire in 30 minutes.\n\nIf you didn't request this, please ignore this email.\n\nBest regards,\PearlChef Team`,
       html: `
         <!DOCTYPE html>
         <html>
@@ -180,7 +180,7 @@ class EmailService {
         <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;">
           <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
             <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px; text-align: center;">
-              <h1 style="color: #ffffff; margin: 0; font-size: 28px;">GeekHeaven</h1>
+              <h1 style="color: #ffffff; margin: 0; font-size: 28px;">PearlChef</h1>
             </div>
             <div style="padding: 40px;">
               <h2 style="color: #333333; margin-bottom: 20px;">Hi ${name}!</h2>

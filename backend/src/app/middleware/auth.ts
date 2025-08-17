@@ -44,7 +44,6 @@ class AuthMiddleware {
       }
 
       const user = await this.tokenService.validateAccessToken(token);
-      
       const existingUser = await this.authService.getUserById(user.id);
       if (!existingUser) {
         res.status(401).json({

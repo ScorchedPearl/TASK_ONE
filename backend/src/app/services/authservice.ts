@@ -234,16 +234,17 @@ class AuthService {
   public async signInWithGoogle(googleToken: string): Promise<AuthResult> {
     try {
       const googleUser = await this.verifyGoogleToken(googleToken);
+      console.log("Google user data:", googleUser);
       let user = await User.findOne({
         $or: [
           { email: googleUser.email },
-          { googleId: googleUser.sub }
+          { googleId: googleUser.id }
         ]
       });
 
       if (user) {
-        if (!user.googleId && googleUser.sub) {
-          user.googleId = googleUser.sub;
+        if (!user.googleId && googleUser.id) {
+          user.googleId = googleUser.id;
           user.provider = 'google';
           user.isEmailVerified = googleUser.email_verified === 'true';
           if (googleUser.picture) {
@@ -256,7 +257,7 @@ class AuthService {
           email: googleUser.email,
           name: googleUser.name || googleUser.given_name,
           provider: 'google',
-          googleId: googleUser.sub,
+          googleId: googleUser.id,
           isEmailVerified: googleUser.email_verified === 'true',
           profileImage: googleUser.picture
         });

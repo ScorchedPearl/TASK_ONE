@@ -141,23 +141,24 @@ export const VoiceControl = ({
         }
       };
 
-      recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
-        const errorMessage = getErrorMessage(event.error);
-        setError(errorMessage);
-        setStatus('error');
-        
-        if (onError) {
-          onError(errorMessage);
-        }
+recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
+ 
+  console.error("SpeechRecognition error event:", event);
+  console.error("event.error:", event.error, "event.message:", (event as any).message);
 
-     
-        if (event.error === 'no-speech' || event.error === 'audio-capture') {
-          timeoutRef.current = setTimeout(() => {
-            setStatus('idle');
-            setError('');
-          }, 2000);
-        }
-      };
+  const errorMessage = getErrorMessage(event.error);
+  setError(errorMessage);
+  setStatus('error');
+  onError?.(errorMessage);
+
+  if (event.error === 'no-speech' || event.error === 'audio-capture') {
+    timeoutRef.current = setTimeout(() => {
+      setStatus('idle');
+      setError('');
+    }, 2000);
+  }
+};
+
 
       recognitionRef.current = recognition;
     }
@@ -188,22 +189,50 @@ export const VoiceControl = ({
         return `Speech recognition error: ${errorCode}`;
     }
   };
+useEffect(() => {
+  console.log("Speech APIs:", {
+    SpeechRecognition: (window as any).SpeechRecognition,
+    webkitSpeechRecognition: (window as any).webkitSpeechRecognition,
+    isSecureContext: window.isSecureContext,
+    locationOrigin: window.location.origin
+  });
+}, []);
 
-  const startListening = useCallback(() => {
-    const recognition = recognitionRef.current;
-    if (!recognition || status === 'listening') return;
+const startListening = useCallback(async () => {
+  const recognition = recognitionRef.current;
+  if (!recognition || status === 'listening') return;
 
+  try {
+   
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      await navigator.mediaDevices.getUserMedia({ audio: true });
+    } else {
+  
+      console.warn("navigator.mediaDevices.getUserMedia not available");
+    }
+
+    
     try {
       recognition.start();
-    } catch (err) {
-      const errorMessage = 'Failed to start speech recognition';
-      setError(errorMessage);
+    } catch (startErr: any) {
+      console.error("recognition.start() threw:", startErr);
+      const msg = startErr?.message || "Failed to start speech recognition";
+      setError(msg);
       setStatus('error');
-      if (onError) {
-        onError(errorMessage);
-      }
+      onError?.(msg);
     }
-  }, [status, onError]);
+  } catch (err: any) {
+    
+    console.error("getUserMedia error:", err);
+    const msg = err?.name === "NotAllowedError" || err?.name === "PermissionDeniedError"
+      ? "Microphone permission denied."
+      : err?.message || "Microphone unavailable.";
+    setError(msg);
+    setStatus('error');
+    onError?.(msg);
+  }
+}, [status, onError]);
+
 
   const stopListening = useCallback(() => {
     const recognition = recognitionRef.current;
@@ -265,7 +294,7 @@ export const VoiceControl = ({
   };
 
   return (
-    <div className="flex flex-col items-center gap-2">
+    <div className="flex flex-col items-center gap-2 hover:bg-slate-800">
       <Button
         variant={getButtonVariant()}
         size="icon"
@@ -281,17 +310,7 @@ export const VoiceControl = ({
         {getIcon()}
       </Button>
       
-      <div className="text-center min-h-[2rem]">
-        <div className="text-xs text-muted-foreground mb-1">
-          {getStatusText()}
-        </div>
-        
-        {transcript && (
-          <div className="text-sm max-w-[200px] p-2 bg-muted rounded text-center">
-            "{transcript}"
-          </div>
-        )}
-      </div>
+
     </div>
   );
 };

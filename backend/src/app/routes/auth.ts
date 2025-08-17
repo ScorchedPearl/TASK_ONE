@@ -3,6 +3,7 @@ import AuthService from '../services/authservice';
 import AuthMiddleware from '../middleware/auth';
 import { JWTError } from '../errors/jwterror';
 import type { CreateCredentialsTokenType, VerifyCredentialsTokenType } from '../user_interface';
+import UserService from '../services/userservice';
 
 const authRouter = Router();
 const authService = AuthService.getInstance();
@@ -427,4 +428,34 @@ authRouter.post('/reset-password', async (req: Request, res: Response) => {
   }
 });
 
+authRouter.post('/update',authMiddleware.authenticate, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user!.id;
+    const { name, profileImage } = req.body;
+
+    if (!name && !profileImage) {
+      return res.status(400).json({
+        success: false,
+        error: 'At least one field (name or profileImage) is required',
+        code: 'MISSING_FIELDS'
+      });
+    }
+
+    const updatedUser = await UserService.updateUser(userId, { name, profileImage });
+
+    res.status(200).json({
+      success: true,
+      data: updatedUser,
+      message: 'User profile updated successfully'
+    });
+
+  } catch (error) {
+    console.error('Update profile error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      code: 'SERVER_ERROR'
+    });
+  }
+});
 export default authRouter;

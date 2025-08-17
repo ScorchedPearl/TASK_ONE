@@ -4,7 +4,7 @@ export interface GoogleTokenResult {
  given_name:string;
  name:string;
  picture:string;
- sub?:string;
+ id:string
 }
 export interface JWTPayload extends JWTUser{
  [key: string]: any; 
