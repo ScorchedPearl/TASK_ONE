@@ -8,24 +8,7 @@ import { Listbox } from '@headlessui/react';
 import { ChevronUpDownIcon } from "@heroicons/react/24/outline";
 import { ThemeToggle } from '@/components/pearl/themetoggle';
 import { VoiceControl } from '@/components/pearl/voiceControl';
-
-
-const Avatar = ({ user }: { user: User }) => {
-  const avatarUrl = user.profileImage;
-  return (
-    <div className="flex items-center space-x-3">
-      <div className="relative">
-        {avatarUrl && (
-          <img 
-            src={avatarUrl} 
-            alt={user.name}
-            className="w-10 h-10 rounded-full border-2 border-cyan-500/30 object-cover"
-          />
-        )}
-      </div>
-    </div>
-  );
-};
+import Avatar from '@/components/pearl/avatar';
 
 interface Category {
   id: string;
@@ -116,7 +99,9 @@ const FlowPage: React.FC = () => {
       navigate('/auth');
     }
   }, [currentUser]);
-const difficulties = ["All Difficulties", "Easy", "Medium", "Hard"];
+
+  const difficulties = ["All Difficulties", "Easy", "Medium", "Hard"];
+  
   useEffect(() => {
     document.documentElement.classList.toggle('dark', darkMode);
     localStorage.setItem('theme', darkMode ? 'dark' : 'light');
@@ -602,19 +587,11 @@ const difficulties = ["All Difficulties", "Easy", "Medium", "Hard"];
               </div>
               
               <div className="flex items-center space-x-4 text-white">
-                
                 <VoiceControl onCommand={handleVoiceCommand}></VoiceControl>
-                
                 <ThemeToggle></ThemeToggle>
                 
-                <Avatar user={currentUser as User} />
-                
-                <button
-                  onClick={logout}
-                  className="px-4 py-2 text-sm font-medium text-gray-400 hover:text-teal-400 transition-colors border-slate-700 border"
-                >
-                  Logout
-                </button>
+                {/* Enhanced Avatar with dropdown */}
+                <Avatar user={currentUser as User} onLogout={logout} />
               </div>
             </div>
           </div>
