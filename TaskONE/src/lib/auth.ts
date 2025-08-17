@@ -7,7 +7,7 @@ export const currentUserFetcher = async (): Promise<User | null> => {
     if (!rawToken) return null;
 
     const token = `Bearer ${rawToken}`;
-    const response = await axios.get(`${process.env.REACT_APP_BACKEND_URL}/api/v1/user/current-user`, {
+    const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/auth/me`, {
       headers: {
         Authorization: token,
       },

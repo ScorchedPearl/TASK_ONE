@@ -3,3 +3,4 @@
 
 @custom-variant dark (&:is(.dark *));
 @custom-variant light (&:is(.light *));
+

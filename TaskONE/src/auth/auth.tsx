@@ -1,15 +1,26 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { useUser } from "@/providers/userprovider";
 import { Label } from "@radix-ui/react-label";
-import { useGoogleLogin } from "@react-oauth/google";
-import type { TokenResponse } from "@react-oauth/google";
 import { AnimatePresence, motion } from "framer-motion";
-import { UserIcon, MailIcon, LockIcon, Mail } from "lucide-react";
+import { 
+  User, 
+  Mail, 
+  Lock, 
+  ChefHat, 
+  Sparkles, 
+  Star,
+  Utensils,
+  Crown,
+  UserIcon,
+  LockIcon,
+  MailIcon
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
+import { useUser } from "@/providers/userprovider";
+import { useGoogleLogin } from "@react-oauth/google";
 
 export default function Auth() {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -18,7 +29,8 @@ export default function Auth() {
   const [showEmailSent, setShowEmailSent] = useState(false);
   const [emailSentFor, setEmailSentFor] = useState<'registration' | 'reset' | null>(null);
   const [userEmail, setUserEmail] = useState("");
-  const navigate=useNavigate();
+  const navigate = () => console.log('Navigate called');
+
   const {
     register,
     handleSubmit,
@@ -36,12 +48,6 @@ export default function Auth() {
     forgotPassword,
     resendVerification 
   } = useUser();
-
-  useEffect(() => {
-    if (currentUser) {
-      navigate("/flow");
-    }
-  }, [currentUser]);
 
   const onSubmit = async (data: { 
     email?: string; 
@@ -67,7 +73,7 @@ export default function Auth() {
         if (password !== data.confirmPassword) {
           setError("confirmPassword", {
             type: "manual",
-            message: "Passwords do not match",
+            message: "Recipe ingredients don't match",
           });
           return;
         }
@@ -80,7 +86,7 @@ export default function Auth() {
         const email = data.email as string;
         const password = data.password as string;
         await signIn(email, password);
-        navigate("/flow");
+        navigate();
       }
     } catch (error: any) {
       console.error("Auth error:", error);
@@ -97,7 +103,7 @@ export default function Auth() {
       } else {
         setError("root", {
           type: "manual",
-          message: error.message || "An error occurred. Please try again."
+          message: error.message || "Kitchen mishap occurred. Please try again."
         });
       }
     } finally {
@@ -106,29 +112,28 @@ export default function Auth() {
   };
 
   const googlelogin = useGoogleLogin({
-    onSuccess: async (cred: TokenResponse) => {
+    onSuccess: async (cred: any) => {
       setIsLoading(true);
       try {
         const token = await googleAuth(cred.access_token);
-        navigate("/flow");
+        navigate();
       } catch (error) {
         console.error("Google login failed:", error);
         setError("root", {
           type: "manual",
-          message: "Google authentication failed. Please try again."
+          message: "Chef's special unavailable. Please try again."
         });
       } finally {
         setIsLoading(false);
       }
     },
     onError: () => {
-      console.log("Google Login Failed");
       setError("root", {
         type: "manual",
-        message: "Google authentication failed. Please try again."
+        message: "Chef's special unavailable. Please try again."
       });
     },
-    scope: "openid profile email https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/gmail.compose https://www.googleapis.com/auth/gmail.send",
+    scope: "openid profile email"
   });
 
   const handleResendEmail = async () => {
@@ -142,7 +147,7 @@ export default function Auth() {
     } catch (error: any) {
       setError("root", {
         type: "manual",
-        message: error.message || "Failed to resend email"
+        message: error.message || "Failed to serve your request"
       });
     } finally {
       setIsLoading(false);
@@ -161,310 +166,345 @@ export default function Auth() {
 
   if (showEmailSent) {
     return (
-      <div>
-        <section className="relative min-h-screen bg-black overflow-hidden">
-          <div className="absolute inset-0">
-            <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff0a_1px,transparent_1px),linear-gradient(to_bottom,#ffffff0a_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_110%)]" />
-          </div>
+      <div className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-b from-slate-900 to-slate-800 text-white">
+        {/* Background Grid Pattern */}
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff0a_1px,transparent_1px),linear-gradient(to_bottom,#ffffff0a_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_110%)]" />
+        </div>
 
-          <div className="absolute top-1/4 left-1/4 w-72 h-72 bg-cyan-500/20 rounded-full blur-3xl animate-pulse" />
-          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-white/10 rounded-full blur-3xl animate-pulse delay-1000" />
-          
-          <div className="flex justify-center items-center h-screen">
-            <Card className="w-[400px] bg-black/50 backdrop-blur-xl border border-white/10 shadow-xl rounded-lg">
-              <div className="p-6 space-y-6 text-center">
-                <div className="space-y-4">
-                  <div className="flex justify-center">
-                    <div className="bg-green-500/20 p-3 rounded-full">
-                      <Mail className="w-8 h-8 text-green-400" />
-                    </div>
-                  </div>
-                  
-                  <h2 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-cyan-400 via-teal-300 to-cyan-200 bg-clip-text text-transparent">
-                    Check Your Email
-                  </h2>
-                  
-                  <p className="text-sm text-gray-400">
-                    We've sent a {emailSentFor === 'registration' ? 'verification' : 'reset'} link to{' '}
-                    <span className="text-cyan-400 font-medium">{userEmail}</span>
-                  </p>
-                  
-                  <p className="text-xs text-gray-500">
-                    {emailSentFor === 'registration' 
-                      ? "Please click the verification link to complete your account setup."
-                      : "Please click the reset link to create a new password."
-                    }
-                  </p>
+        {/* Floating Culinary Icons */}
+        <div className="absolute top-20 left-20 opacity-80">
+          <Utensils className="w-8 h-8 text-primary/30" />
+        </div>
+        <div className="absolute top-40 right-32 opacity-70">
+          <Crown className="w-10 h-10 text-primary/30" />
+        </div>
+        <div className="absolute bottom-32 left-32 opacity-60">
+          <Sparkles className="w-12 h-12 text-primary/20" />
+        </div>
+
+        <Card className="w-[400px] bg-slate-900/50 backdrop-blur-xl border border-primary/20 shadow-xl rounded-lg">
+          <div className="p-6 space-y-6 text-center">
+            <div className="space-y-4">
+              <div className="flex justify-center">
+                <div className="bg-primary/20 p-3 rounded-full">
+                  <Mail className="w-8 h-8 text-primary" />
                 </div>
-
-                <div className="space-y-3">
-                  <Button
-                    onClick={handleResendEmail}
-                    disabled={isLoading}
-                    variant="outline"
-                    className="w-full bg-white/5 border border-white/10 hover:bg-white/10 text-white"
-                  >
-                    {isLoading ? "Sending..." : "Resend Email"}
-                  </Button>
-                  
-                  <Button
-                    onClick={resetForm}
-                    variant="link"
-                    className="w-full text-gray-400 hover:text-white transition-colors"
-                  >
-                    Back to Login
-                  </Button>
-                </div>
-
-                {errors.root && (
-                  <p className="text-sm text-red-500 mt-2">
-                    {errors.root.message}
-                  </p>
-                )}
               </div>
-            </Card>
+              
+              <h2 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-primary to-teal-400 bg-clip-text text-transparent">
+                Recipe Delivered
+              </h2>
+              
+              <p className="text-sm text-slate-300">
+                We've served your {emailSentFor === 'registration' ? 'welcome menu' : 'recipe reset'} to{' '}
+                <span className="text-primary font-medium">{userEmail}</span>
+              </p>
+              
+              <p className="text-xs text-slate-400">
+                {emailSentFor === 'registration' 
+                  ? "Please taste your welcome course and confirm your reservation."
+                  : "Please follow the recipe to craft your new dining credentials."
+                }
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              <Button
+                onClick={handleResendEmail}
+                disabled={isLoading}
+                variant="outline"
+                className="w-full bg-slate-800/50 border border-primary/30 hover:bg-slate-700/50 text-white"
+              >
+                {isLoading ? "Preparing..." : "Serve Again"}
+              </Button>
+              
+              <Button
+                onClick={resetForm}
+                variant="link"
+                className="w-full text-slate-400 hover:text-primary transition-colors"
+              >
+                Return to Dining Hall
+              </Button>
+            </div>
+
+            {errors.root && (
+              <p className="text-sm text-red-400 mt-2">
+                {errors.root.message}
+              </p>
+            )}
           </div>
-        </section>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div>
-      <section className="relative min-h-screen bg-black overflow-hidden">
-        <div className="absolute inset-0">
-          <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff0a_1px,transparent_1px),linear-gradient(to_bottom,#ffffff0a_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_110%)]" />
-        </div>
-
-        <div className="absolute top-1/4 left-1/4 w-72 h-72 bg-cyan-500/20 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-white/10 rounded-full blur-3xl animate-pulse delay-1000" />
-        
-        <div className="flex justify-center items-center h-screen">
-          <Card className="w-[400px] bg-black/50 backdrop-blur-xl border border-white/10 shadow-xl rounded-lg">
-            <div className="p-6 space-y-6">
-              <div className="space-y-2 text-center">
-                <h2 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-cyan-400 via-teal-300 to-cyan-200 bg-clip-text text-transparent">
-                  {isForgotPassword
-                    ? "Reset Password"
-                    : isSignUp
-                    ? "Create Account"
-                    : "Welcome Back"}
-                </h2>
-                <p className="text-sm text-gray-400">
-                  {isForgotPassword
-                    ? "Enter your email to receive a reset link"
-                    : isSignUp
-                    ? "Sign up for an amazing experience"
-                    : "Sign in to continue your journey"}
-                </p>
-              </div>
-
-              <AnimatePresence mode="wait">
-                {!isForgotPassword && !isSignUp && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="w-full flex items-center justify-center gap-3 bg-white/5 border border-white/10 hover:bg-white/10 text-white py-2 rounded-lg"
-                      onClick={() => googlelogin()}
-                      disabled={isLoading}
-                    >
-                      <svg className="w-5 h-5" viewBox="0 0 24 24">
-                        <path
-                          fill="white"
-                          d="M12 10.2V14h5.6c-.3 1.3-1 2.4-2 3.1v2.6h3.2c1.9-1.8 3-4.3 3-7.1 0-.7-.1-1.3-.2-1.9H12z"
-                        />
-                        <path
-                          fill="cyan"
-                          d="M6.8 14.6l-.9.7-2.5 1.9C5.1 20.8 8.4 23 12 23c3 0 5.5-1 7.4-2.6l-3.2-2.5c-.9.6-2.1 1-3.4 1-2.7 0-5-1.8-5.9-4.3z"
-                        />
-                        <path
-                          fill="cyan"
-                          d="M3.4 6.7C2.5 8.4 2 10.2 2 12c0 1.8.5 3.6 1.4 5.3l3.4-2.6c-.4-1.1-.6-2.2-.6-2.7 0-.6.2-1.6.6-2.7L3.4 6.7z"
-                        />
-                        <path
-                          fill="white"
-                          d="M12 4.8c1.7 0 3.2.6 4.4 1.7L19.5 4C17.5 2.2 14.9 1 12 1 8.4 1 5.1 3.2 3.4 6.7l3.4 2.6C7 6.8 9.3 4.8 12 4.8z"
-                        />
-                      </svg>
-                      <span className="text-white font-medium">
-                        Continue With Google
-                      </span>
-                    </Button>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-             // Replace the entire form section with this:
-
-<form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-  <AnimatePresence mode="wait">
-    {isSignUp && (
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -20 }}
-        className="space-y-2"
-      >
-        <Label htmlFor="name" className="text-sm text-gray-300">
-          Name
-        </Label>
-        <div className="relative">
-          <UserIcon
-            className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-            size={18}
-          />
-          <Input
-            id="name"
-            {...register("name")}
-            className="pl-10 bg-white/5 border border-white/10 text-white py-2 rounded-lg"
-            placeholder="Enter your name"
-            required
-          />
-        </div>
-        {errors.name && typeof errors.name.message === "string" && (
-          <p className="text-sm text-red-500">{errors.name.message}</p>
-        )}
-      </motion.div>
-    )}
-  </AnimatePresence>
-
-  <div className="space-y-2">
-    <Label htmlFor="email" className="text-sm text-gray-300">
-      Email
-    </Label>
-    <div className="relative">
-      <MailIcon
-        className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-        size={18}
-      />
-      <Input
-        id="email"
-        {...register("email")}
-        type="email"
-        className="pl-10 bg-white/5 border border-white/10 text-white py-2 rounded-lg"
-        placeholder="Enter your email"
-        required
-      />
-    </div>
-    {errors.email && typeof errors.email.message === "string" && (
-      <p className="text-sm text-red-500">{errors.email.message}</p>
-    )}
-  </div>
-
-  {/* Password field - show for sign in and sign up, hide for forgot password */}
-  {!isForgotPassword && (
-    <div className="space-y-2">
-      <Label htmlFor="password" className="text-sm text-gray-300">
-        Password
-      </Label>
-      <div className="relative">
-        <LockIcon
-          className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-          size={18}
-        />
-        <Input
-          id="password"
-          {...register("password")}
-          type="password"
-          className="pl-10 bg-white/5 border border-white/10 text-white py-2 rounded-lg"
-          placeholder="Enter your password"
-          required
-        />
+    <div className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-b from-slate-900 to-slate-800 text-white">
+      {/* Background Grid Pattern */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff0a_1px,transparent_1px),linear-gradient(to_bottom,#ffffff0a_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_110%)]" />
       </div>
-      {errors.password && typeof errors.password.message === "string" && (
-        <p className="text-sm text-red-500">{errors.password.message}</p>
-      )}
-    </div>
-  )}
 
-  <AnimatePresence mode="wait">
-    {isSignUp && (
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: 20 }}
-        className="space-y-2"
-      >
-        <Label htmlFor="confirmPassword" className="text-sm text-gray-300">
-          Confirm Password
-        </Label>
-        <div className="relative">
-          <LockIcon
-            className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-            size={18}
-          />
-          <Input
-            id="confirmPassword"
-            {...register("confirmPassword")}
-            type="password"
-            className="pl-10 bg-white/5 border border-white/10 text-white py-2 rounded-lg"
-            placeholder="Confirm your password"
-            required
-          />
-        </div>
-        {errors.confirmPassword && typeof errors.confirmPassword.message === "string" && (
-          <p className="text-sm text-red-500">
-            {errors.confirmPassword.message}
-          </p>
-        )}
-      </motion.div>
-    )}
-  </AnimatePresence>
+      {/* Floating Culinary Icons */}
+      <div className="absolute top-20 left-20 opacity-80">
+        <ChefHat className="w-10 h-10 text-primary/30" />
+      </div>
+      <div className="absolute top-40 right-32 opacity-70">
+        <Sparkles className="w-8 h-8 text-primary/30" />
+      </div>
+      <div className="absolute bottom-32 left-32 opacity-60">
+        <Star className="w-12 h-12 text-primary/20" />
+      </div>
+      <div className="absolute bottom-20 right-20 opacity-50">
+        <Utensils className="w-6 h-6 text-primary/25" />
+      </div>
 
-  <Button
-    type="submit"
-    disabled={isLoading}
-    className="w-full bg-gradient-to-r from-cyan-400 via-teal-300 to-cyan-200 text-black font-semibold hover:opacity-90 transition-opacity rounded-lg py-2"
-  >
-    {isLoading 
-      ? "Loading..." 
-      : isForgotPassword
-      ? "Send Reset Link"
-      : isSignUp
-      ? "Create Account" 
-      : "Sign In"}
-  </Button>
-
-  {/* Global Error Message */}
-  {errors.root && (
-    <p className="text-sm text-red-500 text-center">
-      {errors.root.message}
-    </p>
-  )}
-</form>
-
-             <Button
-  variant="link"
-  className="w-full text-gray-400 hover:text-white transition-colors"
-  onClick={() => {
-    setIsForgotPassword(false);
-    setIsSignUp(!isSignUp);
-  }}
->
-  {isSignUp
-    ? "Already have an account? Sign In"
-    : "Don't have an account? Sign Up"}
-</Button>
-
-{!isSignUp && (
-  <Button
-    variant="link"
-    className="w-full text-gray-400 hover:text-white transition-colors"
-    onClick={() => setIsForgotPassword(!isForgotPassword)}
-  >
-    {isForgotPassword ? "Back to Sign In" : "Forgot Password?"}
-  </Button>
-)}
+      <Card className="w-[400px] bg-slate-900/50 backdrop-blur-xl border border-primary/20 shadow-xl rounded-lg">
+        <div className="p-6 space-y-6">
+          <div className="space-y-2 text-center">
+            <div className="flex justify-center mb-4">
+              <div className="bg-primary/20 p-2 rounded-full">
+                <ChefHat className="w-6 h-6 text-primary" />
+              </div>
             </div>
-          </Card>
+            
+            <h2 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-primary to-teal-400 bg-clip-text text-transparent">
+              {isForgotPassword
+                ? "Recipe Recovery"
+                : isSignUp
+                ? "Join Our Kitchen"
+                : "Welcome Back, Chef"}
+            </h2>
+            <p className="text-sm text-slate-300">
+              {isForgotPassword
+                ? "Enter your details to recover your culinary credentials"
+                : isSignUp
+                ? "Create your chef profile for an exquisite dining experience"
+                : "Sign in to continue your elegant culinary journey"}
+            </p>
+          </div>
+
+          <AnimatePresence mode="wait">
+            {!isForgotPassword && !isSignUp && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.3 }}
+              >
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full flex items-center justify-center gap-3 bg-slate-800/50 border border-primary/30 hover:bg-slate-700/50 text-white py-3 rounded-lg"
+                  onClick={() => googlelogin()}
+                  disabled={isLoading}
+                >
+                  <svg className="w-5 h-5" viewBox="0 0 24 24">
+                    <path
+                      fill="white"
+                      d="M12 10.2V14h5.6c-.3 1.3-1 2.4-2 3.1v2.6h3.2c1.9-1.8 3-4.3 3-7.1 0-.7-.1-1.3-.2-1.9H12z"
+                    />
+                    <path
+                      fill="currentColor"
+                      className="text-primary"
+                      d="M6.8 14.6l-.9.7-2.5 1.9C5.1 20.8 8.4 23 12 23c3 0 5.5-1 7.4-2.6l-3.2-2.5c-.9.6-2.1 1-3.4 1-2.7 0-5-1.8-5.9-4.3z"
+                    />
+                    <path
+                      fill="currentColor"
+                      className="text-primary"
+                      d="M3.4 6.7C2.5 8.4 2 10.2 2 12c0 1.8.5 3.6 1.4 5.3l3.4-2.6c-.4-1.1-.6-2.2-.6-2.7 0-.6.2-1.6.6-2.7L3.4 6.7z"
+                    />
+                    <path
+                      fill="white"
+                      d="M12 4.8c1.7 0 3.2.6 4.4 1.7L19.5 4C17.5 2.2 14.9 1 12 1 8.4 1 5.1 3.2 3.4 6.7l3.4 2.6C7 6.8 9.3 4.8 12 4.8z"
+                    />
+                  </svg>
+                  <span className="text-white font-medium">
+                    Chef's Special Access
+                  </span>
+                </Button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {!isForgotPassword && !isSignUp && (
+            <div className="text-center text-slate-400 text-sm flex items-center">
+              <div className="flex-1 h-px bg-slate-700"></div>
+              <span className="px-3">or continue with credentials</span>
+              <div className="flex-1 h-px bg-slate-700"></div>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <AnimatePresence mode="wait">
+              {isSignUp && (
+                <motion.div
+                  initial={{ opacity: 0, y: -20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  className="space-y-2"
+                >
+                  <Label htmlFor="name" className="text-sm text-slate-300">
+                    Chef Name
+                  </Label>
+                  <div className="relative">
+                    <UserIcon
+                      className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400"
+                      size={18}
+                    />
+                    <Input
+                      id="name"
+                      {...register("name")}
+                      className="pl-10 bg-slate-800/50 border border-slate-700 text-white py-3 rounded-lg focus:border-primary focus:ring-1 focus:ring-primary"
+                      placeholder="Enter your chef name"
+                      required
+                    />
+                  </div>
+                  {errors.name && typeof errors.name.message === "string" && (
+                    <p className="text-sm text-red-400">{errors.name.message}</p>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <div className="space-y-2">
+              <Label htmlFor="email" className="text-sm text-slate-300">
+                Email Address
+              </Label>
+              <div className="relative">
+                <MailIcon
+                  className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400"
+                  size={18}
+                />
+                <Input
+                  id="email"
+                  {...register("email")}
+                  type="email"
+                  className="pl-10 bg-slate-800/50 border border-slate-700 text-white py-3 rounded-lg focus:border-primary focus:ring-1 focus:ring-primary"
+                  placeholder="Enter your email"
+                  required
+                />
+              </div>
+              {errors.email && typeof errors.email.message === "string" && (
+                <p className="text-sm text-red-400">{errors.email.message}</p>
+              )}
+            </div>
+
+            {!isForgotPassword && (
+              <div className="space-y-2">
+                <Label htmlFor="password" className="text-sm text-slate-300">
+                  {isSignUp ? "Create Password" : "Password"}
+                </Label>
+                <div className="relative">
+                  <LockIcon
+                    className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400"
+                    size={18}
+                  />
+                  <Input
+                    id="password"
+                    {...register("password")}
+                    type="password"
+                    className="pl-10 bg-slate-800/50 border border-slate-700 text-white py-3 rounded-lg focus:border-primary focus:ring-1 focus:ring-primary"
+                    placeholder={isSignUp ? "Create a secure password" : "Enter your password"}
+                    required
+                  />
+                </div>
+                {errors.password && typeof errors.password.message === "string" && (
+                  <p className="text-sm text-red-400">{errors.password.message}</p>
+                )}
+              </div>
+            )}
+
+            <AnimatePresence mode="wait">
+              {isSignUp && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 20 }}
+                  className="space-y-2"
+                >
+                  <Label htmlFor="confirmPassword" className="text-sm text-slate-300">
+                    Confirm Recipe
+                  </Label>
+                  <div className="relative">
+                    <LockIcon
+                      className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400"
+                      size={18}
+                    />
+                    <Input
+                      id="confirmPassword"
+                      {...register("confirmPassword")}
+                      type="password"
+                      className="pl-10 bg-slate-800/50 border border-slate-700 text-white py-3 rounded-lg focus:border-primary focus:ring-1 focus:ring-primary"
+                      placeholder="Confirm your password"
+                      required
+                    />
+                  </div>
+                  {errors.confirmPassword && typeof errors.confirmPassword.message === "string" && (
+                    <p className="text-sm text-red-400">
+                      {errors.confirmPassword.message}
+                    </p>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <Button
+              type="submit"
+              disabled={isLoading}
+              className="w-full bg-gradient-to-r from-primary to-teal-400 text-primary-foreground font-bold px-8 py-3 text-lg flex items-center justify-center hover:opacity-90 transition-opacity rounded-lg"
+            >
+              {isLoading ? (
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                  Preparing...
+                </div>
+              ) : (
+                <>
+                  <ChefHat className="w-4 h-4 mr-2" />
+                  {isForgotPassword
+                    ? "Send Recovery Recipe"
+                    : isSignUp
+                    ? "Begin Culinary Journey" 
+                    : "Enter Kitchen"}
+                </>
+              )}
+            </Button>
+
+            {errors.root && (
+              <p className="text-sm text-red-400 text-center">
+                {errors.root.message}
+              </p>
+            )}
+          </form>
+
+          <div className="flex flex-col gap-2">
+            <Button
+              variant="link"
+              className="w-full text-slate-400 hover:text-primary transition-colors"
+              onClick={() => {
+                setIsForgotPassword(false);
+                setIsSignUp(!isSignUp);
+              }}
+            >
+              {isSignUp
+                ? "Already have a chef profile? Welcome back"
+                : "New to our kitchen? Join the experience"}
+            </Button>
+
+            {!isSignUp && (
+              <Button
+                variant="link"
+                className="w-full text-slate-400 hover:text-primary transition-colors"
+                onClick={() => setIsForgotPassword(!isForgotPassword)}
+              >
+                {isForgotPassword ? "Return to sign in" : "Lost your recipe?"}
+              </Button>
+            )}
+          </div>
         </div>
-      </section>
+      </Card>
     </div>
   );
 }

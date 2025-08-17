@@ -6,6 +6,7 @@ import Home from '@/home/home';
 import Layout from '@/layout/layout';
 import EmailVerificationPage from './auth/emailverify';
 import PasswordResetPage from './auth/passreset';
+import FlowPage from './flow/flow';
 function App() {
   return (
     <>
@@ -15,6 +16,7 @@ function App() {
           <Route index element={<Home />} />
           <Route path="/auth" element={<Auth />} />
           <Route path="*" element={<Error/>} />
+          <Route path="/flow" element={<FlowPage />} />
           <Route path="/verify-email" element={<EmailVerificationPage />} />
           <Route path="/reset-password" element={<PasswordResetPage/>} />
         </Route>
