@@ -13,7 +13,6 @@ import {
   Sparkles, 
   Star,
   Utensils,
-  Crown
 } from "lucide-react";
 import { useForm } from "react-hook-form";
 
@@ -32,7 +31,6 @@ export default function PasswordResetPage() {
   const {
     register,
     handleSubmit,
-    watch,
     setError,
     formState: { errors },
   } = useForm<PasswordResetForm>();

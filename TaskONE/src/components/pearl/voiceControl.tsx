@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Mic, MicOff, Volume2, VolumeX } from "lucide-react";
+import { Mic, MicOff,  VolumeX } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
 
 interface VoiceControlProps {
@@ -68,6 +68,7 @@ export const VoiceControl = ({
         window.SpeechRecognition || window.webkitSpeechRecognition;
       setIsSupported(!!SpeechRecognition);
     }
+    console.log(transcript);
   }, []);
 
   useEffect(() => {
@@ -78,14 +79,13 @@ export const VoiceControl = ({
 
     if (SpeechRecognition) {
       const recognition = new SpeechRecognition();
-      
-      // Configuration
+
       recognition.continuous = continuous;
       recognition.interimResults = interimResults;
       recognition.lang = language;
       recognition.maxAlternatives = 1;
 
-      // Event handlers
+  
       recognition.onstart = () => {
         setStatus('listening');
         setError('');
@@ -249,7 +249,7 @@ const startListening = useCallback(async () => {
     }
   };
 
-  // Don't render if not supported
+
   if (!isSupported) {
     return (
       <div className="flex items-center gap-2 text-sm text-muted-foreground">

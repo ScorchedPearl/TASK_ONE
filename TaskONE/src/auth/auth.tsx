@@ -4,9 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@radix-ui/react-label";
 import { AnimatePresence, motion } from "framer-motion";
 import { 
-  User, 
   Mail, 
-  Lock, 
   ChefHat, 
   Sparkles, 
   Star,
@@ -18,7 +16,7 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
+import { set, useForm } from "react-hook-form";
 import { useUser } from "@/providers/userprovider";
 import { useGoogleLogin } from "@react-oauth/google";
 
@@ -106,10 +104,11 @@ export default function Auth() {
           message: error.message
         });
       } else if(error.message?.includes('exists')) {
-        setError("email", {
+         setError("email", {  
           type: "manual",
-          message: "Email already exists. Please sign in."
+          message: "Email already exists. Please sign in or use a different email."
         });
+
       }
       else{
         setError("root", {
@@ -119,8 +118,7 @@ export default function Auth() {
       }
     } finally {
       setIsLoading(false);
-      
-      
+  
     }
   };
 
@@ -128,7 +126,7 @@ export default function Auth() {
     onSuccess: async (cred: any) => {
       setIsLoading(true);
       try {
-        const token = await googleAuth(cred.access_token);
+        await googleAuth(cred.access_token);
       } catch (error) {
         console.error("Google login failed:", error);
         setError("root", {

@@ -11,12 +11,6 @@ interface TokenPair {
   expiresIn: number;
   tokenType: 'Bearer';
 }
-
-interface AuthResult {
-  user: User;
-  tokens: TokenPair;
-}
-
 interface UserContextType {
   currentUser: User | null;
   isLoading: boolean;

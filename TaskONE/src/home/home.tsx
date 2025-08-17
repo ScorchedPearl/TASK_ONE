@@ -1,10 +1,9 @@
-import { useCallback, useState } from "react";
+import {  useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ChefHat, Sparkles, Star } from "lucide-react";
 import { VoiceControl } from "@/components/pearl/voiceControl";
 import { ThemeToggle } from "@/components/pearl/themetoggle";
 import { useNavigate } from "react-router-dom";
-import { set } from "react-hook-form";
 
 export default function Home() {
   const [searchQuery, setSearchQuery] = useState("");

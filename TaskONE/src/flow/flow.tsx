@@ -1,14 +1,13 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { Search, Moon, Sun, Mic, MicOff, ChevronDown, ChevronRight, Play, ExternalLink, BookOpen, CheckCircle, Bookmark, BookmarkCheck, BarChart3, Trophy, Target } from 'lucide-react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { ChevronDown, ChevronRight, BookOpen, Bookmark, BarChart3, BookmarkCheck, CheckCircle, Trophy, Target, Download } from 'lucide-react';
 import { useUser } from '@/providers/userprovider';
 import Loader from '@/loading';
 import { useNavigate } from 'react-router-dom';
 import type { User } from '@/types/auth_interface';
-import { Listbox } from '@headlessui/react';
-import { ChevronUpDownIcon } from "@heroicons/react/24/outline";
-import { ThemeToggle } from '@/components/pearl/themetoggle';
-import { VoiceControl } from '@/components/pearl/voiceControl';
-import Avatar from '@/components/pearl/avatar';
+import Header from '@/components/pearl/headerflow';
+import SearchFilters from '@/components/pearl/searchandfilter';
+import QuestionCard from '@/components/pearl/card';
+import QuestionModal from '@/components/pearl/details';
 
 interface Category {
   id: string;
@@ -33,6 +32,10 @@ interface Question {
   };
   isCompleted: boolean;
   isBookmarked: boolean;
+  description?: string;
+  hints?: string[];
+  lastAttempted?: string;
+  timeSpent?: number;
 }
 
 interface ContentData {
@@ -50,6 +53,12 @@ interface ProgressStats {
   totalQuestions: number;
   completedQuestions: number;
   completionPercentage: number;
+  easyCompleted?: number;
+  mediumCompleted?: number;
+  hardCompleted?: number;
+  easyTotal?: number;
+  mediumTotal?: number;
+  hardTotal?: number;
 }
 
 interface BookmarkData {
@@ -69,7 +78,6 @@ const FlowPage: React.FC = () => {
   
   const [categories, setCategories] = useState<Category[]>([]);
   const [questions, setQuestions] = useState<Question[]>([]);
-  const [filteredQuestions, setFilteredQuestions] = useState<Question[]>([]);
   const [bookmarks, setBookmarks] = useState<any[]>([]);
   const [progressStats, setProgressStats] = useState<ProgressStats>({
     totalQuestions: 0,
@@ -77,15 +85,27 @@ const FlowPage: React.FC = () => {
     completionPercentage: 0
   });
   const [loading, setLoading] = useState(true);
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDifficulty, setSelectedDifficulty] = useState<string>('');
   const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const [sortBy, setSortBy] = useState<string>('default');
+  const [showCompleted, setShowCompleted] = useState<string>('all');
+  
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(['1', '2']));
   const [activeTab, setActiveTab] = useState<'questions' | 'bookmarks' | 'progress'>('questions');
   const [darkMode, setDarkMode] = useState(() => {
     const saved = localStorage.getItem('theme');
     return saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches);
   });
+  
+  const [showBulkActions, setShowBulkActions] = useState(false);
+  const [selectedQuestions, setSelectedQuestions] = useState<Set<string>>(new Set());
+  
+  const [selectedQuestion, setSelectedQuestion] = useState<Question | null>(null);
+  const [showQuestionModal, setShowQuestionModal] = useState(false);
+  
+  
   const [isListening, setIsListening] = useState(false);
   const [speechRecognition, setSpeechRecognition] = useState<any>(null);
   
@@ -100,12 +120,11 @@ const FlowPage: React.FC = () => {
     }
   }, [currentUser]);
 
-  const difficulties = ["All Difficulties", "Easy", "Medium", "Hard"];
-  
   useEffect(() => {
     document.documentElement.classList.toggle('dark', darkMode);
     localStorage.setItem('theme', darkMode ? 'dark' : 'light');
   }, [darkMode]);
+
 
   const fetchCategories = async () => {
     try {
@@ -133,7 +152,7 @@ const FlowPage: React.FC = () => {
       if (search) params.append('search', search);
       if (difficulty) params.append('difficulty', difficulty);
       if (category) params.append('category', category);
-      params.append('limit', '100');
+      params.append('limit', '200');
       
       const response = await fetch(`${BACKEND_URL}/api/content?${params}`, {
         headers: {
@@ -154,7 +173,7 @@ const FlowPage: React.FC = () => {
   const fetchBookmarks = async () => {
     try {
       const token = localStorage.getItem('__Pearl_Token');
-      const response = await fetch(`${BACKEND_URL}/api/content/user/bookmarks?limit=100`, {
+      const response = await fetch(`${BACKEND_URL}/api/content/user/bookmarks?limit=200`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -260,6 +279,45 @@ const FlowPage: React.FC = () => {
     }
   };
 
+  const handleBulkBookmark = async () => {
+    const promises = Array.from(selectedQuestions).map(questionId => toggleBookmark(questionId));
+    await Promise.all(promises);
+    setSelectedQuestions(new Set());
+  };
+
+  const handleBulkComplete = async () => {
+    const promises = Array.from(selectedQuestions).map(questionId => toggleProgress(questionId));
+    await Promise.all(promises);
+    setSelectedQuestions(new Set());
+  };
+
+  const exportProgress = () => {
+    const data = {
+      user: currentUser?.name,
+      exportDate: new Date().toISOString(),
+      stats: progressStats,
+      completedQuestions: questions.filter(q => q.isCompleted).map(q => ({
+        id: q.questionId,
+        title: q.title,
+        difficulty: q.difficulty,
+        category: q.category.title
+      })),
+      bookmarkedQuestions: bookmarks.map(b => ({
+        id: b.question.questionId,
+        title: b.question.title,
+        difficulty: b.question.difficulty
+      }))
+    };
+    
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `pearl-chef-progress-${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
@@ -274,7 +332,6 @@ const FlowPage: React.FC = () => {
     
     if (currentUser) {
       loadData();
-      console.log(currentUser)
     }
   }, [currentUser]);
 
@@ -299,21 +356,40 @@ const FlowPage: React.FC = () => {
     };
   }, [searchTerm, debouncedSearch, activeTab]);
 
-  useEffect(() => {
+  const filteredAndSortedQuestions = useMemo(() => {
     let filtered = questions;
     
-    if (selectedDifficulty) {
-      filtered = filtered.filter(q => q.difficulty === selectedDifficulty);
+    if (showCompleted === 'completed') {
+      filtered = filtered.filter(q => q.isCompleted);
+    } else if (showCompleted === 'incomplete') {
+      filtered = filtered.filter(q => !q.isCompleted);
     }
     
-    if (selectedCategory) {
-      filtered = filtered.filter(q => q.category.id === selectedCategory);
+    switch (sortBy) {
+      case 'difficulty':
+        const difficultyOrder = { 'Easy': 1, 'Medium': 2, 'Hard': 3 };
+        filtered.sort((a, b) => difficultyOrder[a.difficulty] - difficultyOrder[b.difficulty]);
+        break;
+      case 'title':
+        filtered.sort((a, b) => a.title.localeCompare(b.title));
+        break;
+      case 'category':
+        filtered.sort((a, b) => a.category.slNo - b.category.slNo);
+        break;
+      case 'recent':
+        filtered.sort((a, b) => {
+          const aDate = new Date(a.lastAttempted || 0);
+          const bDate = new Date(b.lastAttempted || 0);
+          return bDate.getTime() - aDate.getTime();
+        });
+        break;
     }
     
-    setFilteredQuestions(filtered);
-  }, [questions, selectedDifficulty, selectedCategory]);
+    return filtered;
+  }, [questions, showCompleted, sortBy]);
 
-  const groupedQuestions = filteredQuestions.reduce((acc, question) => {
+
+  const groupedQuestions = filteredAndSortedQuestions.reduce((acc, question) => {
     const categoryId = question.category.id;
     if (!acc[categoryId]) {
       acc[categoryId] = {
@@ -324,6 +400,7 @@ const FlowPage: React.FC = () => {
     acc[categoryId].questions.push(question);
     return acc;
   }, {} as Record<string, { category: any; questions: Question[] }>);
+
 
   const handleVoiceCommand = useCallback((command: string) => {
     console.log('Voice command:', command);
@@ -348,8 +425,15 @@ const FlowPage: React.FC = () => {
       setActiveTab('questions');
       return;
     }
-    if(command.includes('toggle') || command.includes('switch theme')) {
-      setDarkMode(prev => !prev);
+    
+    if (command.includes('bulk actions') || command.includes('select multiple')) {
+      setShowBulkActions(!showBulkActions);
+      return;
+    }
+    
+    if (command.includes('export progress')) {
+      exportProgress();
+      return;
     }
     
     const categoryCommands = categories.map(cat => ({
@@ -392,7 +476,7 @@ const FlowPage: React.FC = () => {
     } else if (command.includes('toggle theme') || command.includes('switch theme')) {
       setDarkMode(prev => !prev);
     }
-  }, [categories]);
+  }, [categories, showBulkActions, exportProgress]);
 
   useEffect(() => {
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
@@ -430,16 +514,6 @@ const FlowPage: React.FC = () => {
     };
   }, [handleVoiceCommand, isListening]);
 
-  const toggleVoiceRecognition = () => {
-    if (!speechRecognition) return;
-    
-    if (isListening) {
-      speechRecognition.stop();
-    } else {
-      speechRecognition.start();
-    }
-  };
-
   const toggleCategory = (categoryId: string) => {
     setExpandedCategories(prev => {
       const newSet = new Set(prev);
@@ -452,117 +526,22 @@ const FlowPage: React.FC = () => {
     });
   };
 
-  const getDifficultyClasses = (difficulty: string) => {
-    switch (difficulty) {
-      case 'Easy': return 'bg-green-600/90 text-white border border-green-500/60 px-3 py-1 rounded-full text-xs font-medium';
-      case 'Medium': return 'bg-amber-600/90 text-white border border-amber-500/60 px-3 py-1 rounded-full text-xs font-medium';
-      case 'Hard': return 'bg-red-600/90 text-white border border-red-500/60 px-3 py-1 rounded-full text-xs font-medium';
-      default: return 'bg-gray-600/90 text-white border border-gray-500/60 px-3 py-1 rounded-full text-xs font-medium';
-    }
+  const handleQuestionSelect = (questionId: string) => {
+    setSelectedQuestions(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(questionId)) {
+        newSet.delete(questionId);
+      } else {
+        newSet.add(questionId);
+      }
+      return newSet;
+    });
   };
 
-  const renderQuestionItem = (question: Question, qIndex: number) => (
-    <div
-      key={question.id}
-      className="p-6 hover:bg-gray-700/30 dark:hover:bg-gray-800/30 transition-all duration-300"
-      style={{ animationDelay: `${qIndex * 50}ms` }}
-    >
-      <div className="flex items-start justify-between">
-        <div className="flex-1">
-          <div className="flex items-center space-x-3 mb-2">
-            <span className="text-sm font-mono text-gray-500 dark:text-gray-400">
-              #{question.questionId}
-            </span>
-            <span className={getDifficultyClasses(question.difficulty)}>
-              {question.difficulty}
-            </span>
-            {question.isCompleted && (
-              <CheckCircle size={16} className="text-green-400" />
-            )}
-          </div>
-          
-          <h3 className="text-lg font-medium text-gray-100 dark:text-gray-200 mb-2">
-            {question.title}
-          </h3>
-          
-          {question.tags && question.tags.length > 0 && (
-            <div className="flex flex-wrap gap-2 mb-3">
-              {question.tags.map((tag, tagIndex) => (
-                <span
-                  key={tagIndex}
-                  className="px-2 py-1 text-xs bg-gray-700/50 dark:bg-gray-600/50 text-gray-300 dark:text-gray-400 rounded-md border border-gray-600/50 dark:border-gray-500/50"
-                >
-                  {tag}
-                </span>
-              ))}
-            </div>
-          )}
-        </div>
-        
-        <div className="flex items-center space-x-2 ml-4">
-          <button
-            onClick={() => toggleProgress(question.id)}
-            className={`p-2 rounded-lg transition-all duration-300 ${
-              question.isCompleted 
-                ? 'text-green-400 hover:text-green-300 hover:bg-green-500/10' 
-                : 'text-gray-400 hover:text-green-400 hover:bg-green-500/10'
-            }`}
-            title={question.isCompleted ? "Mark as incomplete" : "Mark as complete"}
-          >
-            <CheckCircle size={16} />
-          </button>
-          
-          <button
-            onClick={() => toggleBookmark(question.id)}
-            className={`p-2 rounded-lg transition-all duration-300 ${
-              question.isBookmarked 
-                ? 'text-blue-400 hover:text-blue-300 hover:bg-blue-500/10' 
-                : 'text-gray-400 hover:text-blue-400 hover:bg-blue-500/10'
-            }`}
-            title={question.isBookmarked ? "Remove bookmark" : "Add bookmark"}
-          >
-            {question.isBookmarked ? <BookmarkCheck size={16} /> : <Bookmark size={16} />}
-          </button>
-          
-          {question.ytLink && (
-            <a
-              href={question.ytLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="p-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-all duration-300"
-              title="Watch on YouTube"
-            >
-              <Play size={16} />
-            </a>
-          )}
-          
-          {question.p1Link && (
-            <a
-              href={question.p1Link}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="p-2 text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10 rounded-lg transition-all duration-300"
-              title="Problem Link 1"
-            >
-              <ExternalLink size={16} />
-            </a>
-          )}
-          
-          {question.p2Link && (
-            <a
-              href={question.p2Link}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="p-2 text-purple-400 hover:text-purple-300 hover:bg-purple-500/10 rounded-lg transition-all duration-300"
-              title="Problem Link 2"
-            >
-              <BookOpen size={16} />
-            </a>
-          )}
-        </div>
-      </div>
-    </div>
-  );
+  const handleShowDetails = (question: Question) => {
+    setSelectedQuestion(question);
+    setShowQuestionModal(true);
+  };
 
   if (loading) {
     return (
@@ -577,25 +556,11 @@ const FlowPage: React.FC = () => {
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,rgba(14,165,233,0.15)_1px,transparent_0)] bg-[length:20px_20px]"></div>
       
       <div className="relative min-h-screen">
-        <header className="sticky top-0 z-50 bg-gray-900/80 dark:bg-black/80 backdrop-blur-xl border-b border-gray-800/50 dark:border-gray-700/50">
-          <div className="max-w-7xl mx-auto px-6">
-            <div className="flex justify-between items-center h-16">
-              <div className="flex items-center space-x-4">
-                <h1 className="text-2xl font-bold bg-gradient-to-r from-teal-400 to-teal-500 bg-clip-text text-transparent">
-                  PearlChef
-                </h1>
-              </div>
-              
-              <div className="flex items-center space-x-4 text-white">
-                <VoiceControl onCommand={handleVoiceCommand}></VoiceControl>
-                <ThemeToggle></ThemeToggle>
-                
-                {/* Enhanced Avatar with dropdown */}
-                <Avatar user={currentUser as User} onLogout={logout} />
-              </div>
-            </div>
-          </div>
-        </header>
+        <Header 
+          currentUser={currentUser as User}
+          onLogout={logout}
+          onVoiceCommand={handleVoiceCommand}
+        />
 
         <main className="max-w-7xl mx-auto px-6 py-8">
           <div className="mb-8 border-b border-gray-800/50 dark:border-gray-700/50">
@@ -610,7 +575,7 @@ const FlowPage: React.FC = () => {
               >
                 <div className="flex items-center gap-2">
                   <BookOpen size={16} />
-                  All Questions
+                  All Questions ({questions.length})
                 </div>
               </button>
               <button
@@ -636,157 +601,143 @@ const FlowPage: React.FC = () => {
               >
                 <div className="flex items-center gap-2">
                   <BarChart3 size={16} />
-                  Progress
+                  Progress ({progressStats.completionPercentage}%)
                 </div>
               </button>
             </nav>
           </div>
 
-          {activeTab === 'questions' && (
-            <div className="mb-8 space-y-4 animate-[fadeInUp_0.8s_ease-out]">
-              <div className="flex flex-col sm:flex-row gap-4">
-                <div className="flex-1 relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500" size={20} />
-                  <input
-                    type="text"
-                    placeholder="Search questions... (or use voice command)"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 bg-gray-800/50 dark:bg-gray-900/50 border border-gray-700/50 dark:border-gray-600/50 rounded-xl text-gray-100 dark:text-gray-200 placeholder-gray-500 focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 focus:scale-[1.02] transition-all duration-300 backdrop-blur-sm"
-                  />
-                </div>
-                
-               <div className="flex gap-4">
-      {/* Difficulty Dropdown */}
-      <div className="relative w-48">
-        <Listbox value={selectedDifficulty} onChange={setSelectedDifficulty}>
-          <div className="relative">
-            <Listbox.Button className="w-full flex justify-between items-center px-4 py-3 bg-gray-800/50 backdrop-blur-md border border-gray-700/50 rounded-xl text-gray-100 font-medium shadow-md hover:border-cyan-400 focus:ring-2 focus:ring-cyan-500 transition-all duration-300">
-              <span>{selectedDifficulty || "All Difficulties"}</span>
-              <ChevronUpDownIcon className="h-5 w-5 text-cyan-400 transition-transform duration-300" />
-            </Listbox.Button>
-            <Listbox.Options className="absolute mt-2 w-full bg-gray-900/90 backdrop-blur-xl rounded-xl shadow-lg border border-gray-700/50 z-50">
-              {difficulties.map((diff, idx) => (
-                <Listbox.Option
-                  key={idx}
-                  value={diff === "All Difficulties" ? "" : diff}
-                  className={({ active }) =>
-                    `cursor-pointer select-none px-4 py-3 text-gray-100 transition ${
-                      active ? "bg-cyan-500/20 text-cyan-300" : ""
-                    }`
-                  }
-                >
-                  {diff}
-                </Listbox.Option>
-              ))}
-            </Listbox.Options>
-          </div>
-        </Listbox>
-      </div>
 
-      {/* Category Dropdown */}
-      <div className="relative w-64">
-        <Listbox value={selectedCategory} onChange={setSelectedCategory}>
-          <div className="relative">
-            <Listbox.Button className="w-full flex justify-between items-center px-4 py-3 bg-gray-800/50 backdrop-blur-md border border-gray-700/50 rounded-xl text-gray-100 font-medium shadow-md hover:border-cyan-400 focus:ring-2 focus:ring-cyan-500 transition-all duration-300">
-              <span>
-                {selectedCategory
-                  ? categories.find((cat) => cat.id === selectedCategory)?.title
-                  : "All Categories"}
-              </span>
-              <ChevronUpDownIcon className="h-5 w-5 text-cyan-400 transition-transform duration-300" />
-            </Listbox.Button>
-            <Listbox.Options className="absolute mt-2 w-full max-h-64 overflow-y-auto bg-gray-900/90 backdrop-blur-xl rounded-xl shadow-lg border border-gray-700/50 z-50">
-              <Listbox.Option
-                value=""
-                className={({ active }) =>
-                  `cursor-pointer select-none px-4 py-3 text-gray-100 transition ${
-                    active ? "bg-cyan-500/20 text-cyan-300" : ""
-                  }`
-                }
-              >
-                All Categories
-              </Listbox.Option>
-              {categories.map((category) => (
-                <Listbox.Option
-                  key={category.id}
-                  value={category.id}
-                  className={({ active }) =>
-                    `cursor-pointer select-none px-4 py-3 text-gray-100 transition ${
-                      active ? "bg-cyan-500/20 text-cyan-300" : ""
-                    }`
-                  }
-                >
-                  {category.title}
-                </Listbox.Option>
-              ))}
-            </Listbox.Options>
-          </div>
-        </Listbox>
-      </div>
-    </div>
-              </div>
-              
-              {speechRecognition && (
-                <div className="text-sm text-gray-500 bg-gray-800/30 dark:bg-gray-900/30 rounded-lg p-3 border border-gray-700/30 dark:border-gray-600/30">
-                  Try voice commands: "Search for sorting", "Toggle theme", "Bookmarks", "Progress"
-                </div>
-              )}
-            </div>
-          )}
           {activeTab === 'questions' && (
-            <div className="space-y-6">
-              {Object.entries(groupedQuestions).length === 0 ? (
-                <div className="text-center py-12">
-                  <div className="text-gray-500 text-lg">
-                    No questions found matching your criteria
-                  </div>
-                </div>
-              ) : (
-                Object.entries(groupedQuestions)
-                  .sort(([, a], [, b]) => a.category.slNo - b.category.slNo)
-                  .map(([categoryId, { category, questions }], index) => (
-                    <div
-                      key={categoryId}
-                      className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 dark:from-gray-900/50 dark:to-black/50 rounded-xl border border-gray-700/50 dark:border-gray-600/50 overflow-hidden backdrop-blur-sm shadow-2xl hover:shadow-cyan-500/10 hover:-translate-y-2 transition-all duration-500 animate-[fadeInUp_0.8s_ease-out]"
-                      style={{ animationDelay: `${index * 100}ms` }}
-                    >
+            <>
+              <SearchFilters
+                searchTerm={searchTerm}
+                setSearchTerm={setSearchTerm}
+                selectedDifficulty={selectedDifficulty}
+                setSelectedDifficulty={setSelectedDifficulty}
+                selectedCategory={selectedCategory}
+                setSelectedCategory={setSelectedCategory}
+                categories={categories}
+                speechRecognition={speechRecognition}
+                sortBy={sortBy}
+                setSortBy={setSortBy}
+                showCompleted={showCompleted}
+                setShowCompleted={setShowCompleted}
+              />
+
+              <div className="mb-6 flex justify-between items-center">
+                <div className="flex items-center gap-4">
+                  <button
+                    onClick={() => setShowBulkActions(!showBulkActions)}
+                    className={`px-4 py-2 rounded-lg transition-all duration-200 ${
+                      showBulkActions 
+                        ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30' 
+                        : 'bg-gray-800/50 text-gray-300 hover:bg-gray-700/50 border border-gray-600/50'
+                    }`}
+                  >
+                    {showBulkActions ? 'Hide' : 'Show'} Bulk Actions
+                  </button>
+                  
+                  {showBulkActions && selectedQuestions.size > 0 && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-gray-400">
+                        {selectedQuestions.size} selected
+                      </span>
                       <button
-                        onClick={() => toggleCategory(categoryId)}
-                        className="w-full px-6 py-4 flex items-center justify-between bg-gray-800/30 dark:bg-gray-900/30 hover:bg-gray-700/40 dark:hover:bg-gray-800/40 transition-all duration-300"
+                        onClick={handleBulkComplete}
+                        className="px-3 py-1 bg-green-500/20 text-green-300 hover:bg-green-500/30 border border-green-500/30 rounded-md text-sm transition-all duration-200"
                       >
-                        <div className="flex items-center space-x-3">
-                          <span className="text-sm font-medium text-cyan-400 bg-cyan-500/20 px-3 py-1 rounded-full border border-cyan-500/30">
-                            #{category.slNo}
-                          </span>
-                          <h2 className="text-xl font-semibold text-gray-100 dark:text-gray-200 drop-shadow-sm">
-                            {category.title}
-                          </h2>
-                          <span className="text-sm text-gray-400 dark:text-gray-500">
-                            ({questions.length} questions)
-                          </span>
-                        </div>
-                        <div className="transform transition-transform duration-300">
-                          {expandedCategories.has(categoryId) ? 
-                            <ChevronDown size={20} className="text-gray-400" /> : 
-                            <ChevronRight size={20} className="text-gray-400" />
-                          }
-                        </div>
+                        Mark Complete
                       </button>
+                      <button
+                        onClick={handleBulkBookmark}
+                        className="px-3 py-1 bg-blue-500/20 text-blue-300 hover:bg-blue-500/30 border border-blue-500/30 rounded-md text-sm transition-all duration-200"
+                      >
+                        Bookmark
+                      </button>
+                    </div>
+                  )}
+                </div>
 
-                      <div className={`overflow-hidden transition-all duration-500 ease-in-out ${
-                        expandedCategories.has(categoryId) ? 'max-h-none opacity-100' : 'max-h-0 opacity-0'
-                      }`}>
-                        <div className="divide-y divide-gray-700/30 dark:divide-gray-600/30">
-                          {questions.map((question, qIndex) => renderQuestionItem(question, qIndex))}
+                <button
+                  onClick={exportProgress}
+                  className="flex items-center gap-2 px-4 py-2 bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 border border-purple-500/30 rounded-lg text-sm transition-all duration-200"
+                >
+                  <Download size={16} />
+                  Export Progress
+                </button>
+              </div>
+
+            
+              <div className="space-y-6">
+                {Object.entries(groupedQuestions).length === 0 ? (
+                  <div className="text-center py-12">
+                    <div className="text-gray-500 text-lg">
+                      No questions found matching your criteria
+                    </div>
+                  </div>
+                ) : (
+                  Object.entries(groupedQuestions)
+                    .sort(([, a], [, b]) => a.category.slNo - b.category.slNo)
+                    .map(([categoryId, { category, questions }], index) => (
+                      <div
+                        key={categoryId}
+                        className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 dark:from-gray-900/50 dark:to-black/50 rounded-xl border border-gray-700/50 dark:border-gray-600/50 overflow-hidden backdrop-blur-sm shadow-2xl hover:shadow-cyan-500/10 hover:-translate-y-1 transition-all duration-500 animate-[fadeInUp_0.8s_ease-out]"
+                        style={{ animationDelay: `${index * 100}ms` }}
+                      >
+                        <button
+                          onClick={() => toggleCategory(categoryId)}
+                          className="w-full px-6 py-4 flex items-center justify-between bg-gray-800/30 dark:bg-gray-900/30 hover:bg-gray-700/40 dark:hover:bg-gray-800/40 transition-all duration-300"
+                        >
+                          <div className="flex items-center space-x-3">
+                            <span className="text-sm font-medium text-cyan-400 bg-cyan-500/20 px-3 py-1 rounded-full border border-cyan-500/30">
+                              #{category.slNo}
+                            </span>
+                            <h2 className="text-xl font-semibold text-gray-100 dark:text-gray-200 drop-shadow-sm">
+                              {category.title}
+                            </h2>
+                            <span className="text-sm text-gray-400 dark:text-gray-500">
+                              ({questions.length} questions)
+                            </span>
+                            <div className="text-xs text-gray-500">
+                              {questions.filter(q => q.isCompleted).length} completed
+                            </div>
+                          </div>
+                          <div className="transform transition-transform duration-300">
+                            {expandedCategories.has(categoryId) ? 
+                              <ChevronDown size={20} className="text-gray-400" /> : 
+                              <ChevronRight size={20} className="text-gray-400" />
+                            }
+                          </div>
+                        </button>
+
+                        <div className={`overflow-hidden transition-all duration-500 ease-in-out ${
+                          expandedCategories.has(categoryId) ? 'max-h-none opacity-100' : 'max-h-0 opacity-0'
+                        }`}>
+                          <div className="divide-y divide-gray-700/30 dark:divide-gray-600/30">
+                            {questions.map((question, qIndex) => (
+                              <QuestionCard
+                                key={question.id}
+                                question={question}
+                                qIndex={qIndex}
+                                isSelected={selectedQuestions.has(question.id)}
+                                onToggleProgress={toggleProgress}
+                                onToggleBookmark={toggleBookmark}
+                                onToggleSelect={showBulkActions ? handleQuestionSelect : undefined}
+                                showBulkActions={showBulkActions}
+                                onShowDetails={handleShowDetails}
+                              />
+                            ))}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))
-              )}
-            </div>
+                    ))
+                )}
+              </div>
+            </>
           )}
 
+  
           {activeTab === 'bookmarks' && (
             <div className="space-y-6 min-h-[400px]">
               {bookmarks.length === 0 ? (
@@ -804,38 +755,39 @@ const FlowPage: React.FC = () => {
                     </h2>
                   </div>
                   <div className="divide-y divide-gray-700/30 dark:divide-gray-600/30">
-                    {bookmarks.map((bookmark, index) => (
-                      <div key={bookmark.id} className="p-6 hover:bg-gray-700/30 dark:hover:bg-gray-800/30 transition-all duration-300">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center space-x-3 mb-2">
-                              <span className={getDifficultyClasses(bookmark.question.difficulty)}>
-                                {bookmark.question.difficulty}
-                              </span>
-                              <span className="text-xs text-gray-500 dark:text-gray-400">
-                                {bookmark.question.category.title}
-                              </span>
-                            </div>
-                            <h3 className="text-lg font-medium text-gray-100 dark:text-gray-200">
-                              {bookmark.question.title}
-                            </h3>
-                          </div>
-                          <button
-                            onClick={() => toggleBookmark(bookmark.questionId)}
-                            className="p-2 text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 rounded-lg transition-all duration-300"
-                            title="Remove bookmark"
-                          >
-                            <BookmarkCheck size={16} />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
+                    {bookmarks.map((bookmark, index) => {
+                      const question: Question = {
+                        id: bookmark.questionId,
+                        questionId: bookmark.question.questionId,
+                        title: bookmark.question.title,
+                        difficulty: bookmark.question.difficulty,
+                        tags: bookmark.question.tags || [],
+                        category: bookmark.question.category,
+                        isCompleted: bookmark.question.isCompleted || false,
+                        isBookmarked: true,
+                        ytLink: bookmark.question.ytLink,
+                        p1Link: bookmark.question.p1Link,
+                        p2Link: bookmark.question.p2Link
+                      };
+                      
+                      return (
+                        <QuestionCard
+                          key={bookmark.id}
+                          question={question}
+                          qIndex={index}
+                          onToggleProgress={toggleProgress}
+                          onToggleBookmark={toggleBookmark}
+                          onShowDetails={handleShowDetails}
+                        />
+                      );
+                    })}
                   </div>
                 </div>
               )}
             </div>
           )}
 
+  
           {activeTab === 'progress' && (
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -878,9 +830,9 @@ const FlowPage: React.FC = () => {
                       <span className="text-gray-300 dark:text-gray-400">Overall Progress</span>
                       <span className="text-gray-300 dark:text-gray-400">{progressStats.completedQuestions}/{progressStats.totalQuestions}</span>
                     </div>
-                    <div className="w-full bg-gray-700 dark:bg-gray-800 rounded-full h-2">
+                    <div className="w-full bg-gray-700 dark:bg-gray-800 rounded-full h-3">
                       <div 
-                        className="bg-gradient-to-r from-cyan-400 to-blue-500 h-2 rounded-full transition-all duration-500"
+                        className="bg-gradient-to-r from-cyan-400 to-blue-500 h-3 rounded-full transition-all duration-500"
                         style={{ width: `${progressStats.completionPercentage}%` }}
                       ></div>
                     </div>
@@ -888,16 +840,28 @@ const FlowPage: React.FC = () => {
                   
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
                     <div className="text-center p-4 bg-gray-700/30 dark:bg-gray-800/30 rounded-lg">
-                      <div className="text-2xl font-bold text-green-400 mb-1">{Math.floor((progressStats.completedQuestions / progressStats.totalQuestions) * 100) || 0}%</div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">Easy</div>
+                      <div className="text-2xl font-bold text-green-400 mb-1">
+                        {progressStats.easyCompleted || Math.floor((progressStats.completedQuestions / 3))}
+                      </div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                        Easy ({progressStats.easyTotal || Math.floor(progressStats.totalQuestions / 3)})
+                      </div>
                     </div>
                     <div className="text-center p-4 bg-gray-700/30 dark:bg-gray-800/30 rounded-lg">
-                      <div className="text-2xl font-bold text-yellow-400 mb-1">{Math.floor((progressStats.completedQuestions / progressStats.totalQuestions) * 100) || 0}%</div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">Medium</div>
+                      <div className="text-2xl font-bold text-yellow-400 mb-1">
+                        {progressStats.mediumCompleted || Math.floor((progressStats.completedQuestions / 3))}
+                      </div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                        Medium ({progressStats.mediumTotal || Math.floor(progressStats.totalQuestions / 3)})
+                      </div>
                     </div>
                     <div className="text-center p-4 bg-gray-700/30 dark:bg-gray-800/30 rounded-lg">
-                      <div className="text-2xl font-bold text-red-400 mb-1">{Math.floor((progressStats.completedQuestions / progressStats.totalQuestions) * 100) || 0}%</div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">Hard</div>
+                      <div className="text-2xl font-bold text-red-400 mb-1">
+                        {progressStats.hardCompleted || Math.floor((progressStats.completedQuestions / 3))}
+                      </div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                        Hard ({progressStats.hardTotal || Math.floor(progressStats.totalQuestions / 3)})
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -909,11 +873,19 @@ const FlowPage: React.FC = () => {
         <footer className="mt-16 py-8 border-t border-gray-800/50 dark:border-gray-700/50 bg-gray-900/30 dark:bg-black/30">
           <div className="max-w-7xl mx-auto px-6 text-center">
             <p className="text-gray-500 dark:text-gray-400 text-sm">
-              © 2024 PearlChef. Elevating your coding journey.
+              © 2024 PearlChef. Elevating your coding journey with modern tools.
             </p>
           </div>
         </footer>
       </div>
+
+      <QuestionModal
+        question={selectedQuestion}
+        isOpen={showQuestionModal}
+        onClose={() => setShowQuestionModal(false)}
+        onToggleProgress={toggleProgress}
+        onToggleBookmark={toggleBookmark}
+      />
     </div>
   );
 };
