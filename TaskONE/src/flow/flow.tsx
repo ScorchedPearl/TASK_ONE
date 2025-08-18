@@ -122,25 +122,27 @@ const FlowPage: React.FC = () => {
   const isFetchingRef = useRef(false); 
   const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
   const [questionsPerPage, setQuestionsPerPage] = useState(20);
-  const QUESTIONS_PER_PAGE = questionsPerPage;
 
-  const handleQuestionsPerPageChange = (value: number) => {
+
+  const QUESTIONS_PER_PAGE = useMemo(() => questionsPerPage, [questionsPerPage]);
+
+  const handleQuestionsPerPageChange = useCallback((value: number) => {
     setQuestionsPerPage(value);
     setPagination(prev => ({ ...prev, currentPage: 1 }));
-  };
+  }, []);
 
   useEffect(() => {
     if (!currentUser) {
       navigate('/auth');
     }
-  }, [currentUser]);
+  }, [currentUser, navigate]);
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', darkMode);
     localStorage.setItem('theme', darkMode ? 'dark' : 'light');
   }, [darkMode]);
 
-  const fetchCategories = async () => {
+  const fetchCategories = useCallback(async () => {
     try {
       const token = localStorage.getItem('__Pearl_Token');
       const response = await fetch(`${BACKEND_URL}/api/content/categories`, {
@@ -157,10 +159,9 @@ const FlowPage: React.FC = () => {
     } catch (error) {
       console.error('Failed to fetch categories:', error);
     }
-  };
+  }, [BACKEND_URL]);
 
-  const fetchQuestions = async (search = '', difficulty = '', category = '', page = 1, fromPagination = false) => {
-    
+  const fetchQuestions = useCallback(async (search = '', difficulty = '', category = '', page = 1, fromPagination = false) => {
     if (isFetchingRef.current) {
       console.log('Fetch already in progress, skipping...');
       return;
@@ -194,8 +195,7 @@ const FlowPage: React.FC = () => {
         console.log('Received pagination data:', data.data.pagination);
         
         setQuestions(data.data.questions);
-        
-        // Update pagination state with validation
+
         const newPagination = {
           currentPage: Math.max(1, data.data.pagination.currentPage || page),
           totalPages: Math.max(1, data.data.pagination.totalPages || 1),
@@ -203,8 +203,7 @@ const FlowPage: React.FC = () => {
           hasNext: data.data.pagination.hasNext || false,
           hasPrev: data.data.pagination.hasPrev || false
         };
-        
-        // Additional validation
+
         if (newPagination.currentPage > newPagination.totalPages) {
           newPagination.currentPage = newPagination.totalPages;
         }
@@ -223,9 +222,9 @@ const FlowPage: React.FC = () => {
       setQuestionsLoading(false);
       isFetchingRef.current = false;
     }
-  };
+  }, [BACKEND_URL, QUESTIONS_PER_PAGE]);
 
-  const fetchBookmarks = async () => {
+  const fetchBookmarks = useCallback(async () => {
     try {
       const token = localStorage.getItem('__Pearl_Token');
       const response = await fetch(`${BACKEND_URL}/api/content/user/bookmarks?limit=200`, {
@@ -242,9 +241,9 @@ const FlowPage: React.FC = () => {
     } catch (error) {
       console.error('Failed to fetch bookmarks:', error);
     }
-  };
+  }, [BACKEND_URL]);
 
-  const fetchProgressStats = async () => {
+  const fetchProgressStats = useCallback(async () => {
     try {
       const token = localStorage.getItem('__Pearl_Token');
       const response = await fetch(`${BACKEND_URL}/api/content/user/progress`, {
@@ -261,9 +260,9 @@ const FlowPage: React.FC = () => {
     } catch (error) {
       console.error('Failed to fetch progress stats:', error);
     }
-  };
+  }, [BACKEND_URL]);
 
-  const toggleBookmark = async (questionId: string) => {
+  const toggleBookmark = useCallback(async (questionId: string) => {
     try {
       const token = localStorage.getItem('__Pearl_Token');
       const question = questions.find(q => q.id === questionId);
@@ -303,9 +302,9 @@ const FlowPage: React.FC = () => {
     } catch (error) {
       console.error('Failed to toggle bookmark:', error);
     }
-  };
+  }, [questions, BACKEND_URL, fetchBookmarks]);
 
-  const toggleProgress = async (questionId: string) => {
+  const toggleProgress = useCallback(async (questionId: string) => {
     try {
       const token = localStorage.getItem('__Pearl_Token');
       const question = questions.find(q => q.id === questionId);
@@ -332,21 +331,21 @@ const FlowPage: React.FC = () => {
     } catch (error) {
       console.error('Failed to toggle progress:', error);
     }
-  };
+  }, [questions, BACKEND_URL, fetchProgressStats]);
 
-  const handleBulkBookmark = async () => {
+  const handleBulkBookmark = useCallback(async () => {
     const promises = Array.from(selectedQuestions).map(questionId => toggleBookmark(questionId));
     await Promise.all(promises);
     setSelectedQuestions(new Set());
-  };
+  }, [selectedQuestions, toggleBookmark]);
 
-  const handleBulkComplete = async () => {
+  const handleBulkComplete = useCallback(async () => {
     const promises = Array.from(selectedQuestions).map(questionId => toggleProgress(questionId));
     await Promise.all(promises);
     setSelectedQuestions(new Set());
-  };
+  }, [selectedQuestions, toggleProgress]);
 
-  const exportProgress = () => {
+  const exportProgress = useCallback(() => {
     const data = {
       user: currentUser?.name,
       exportDate: new Date().toISOString(),
@@ -371,10 +370,10 @@ const FlowPage: React.FC = () => {
     a.download = `pearl-chef-progress-${new Date().toISOString().split('T')[0]}.json`;
     a.click();
     URL.revokeObjectURL(url);
-  };
+  }, [currentUser?.name, progressStats, questions, bookmarks]);
 
-  
-  const handlePageChange = (newPage: number) => {
+ 
+  const handlePageChange = useCallback((newPage: number) => {
     console.log('handlePageChange called with page:', newPage);
     console.log('Current pagination state:', pagination);
     
@@ -382,28 +381,21 @@ const FlowPage: React.FC = () => {
       console.log('Page change is valid, fetching questions...');
       fetchQuestions(searchTerm, selectedDifficulty, selectedCategory, newPage, true);
       document.querySelector('.questions-section')?.scrollIntoView({ behavior: 'smooth' });
-    } else {
-      console.log('Page change rejected:', {
-        newPage,
-        currentPage: pagination.currentPage,
-        totalPages: pagination.totalPages,
-        isValid: newPage >= 1 && newPage <= pagination.totalPages,
-        isDifferent: newPage !== pagination.currentPage
-      });
     }
-  };
+  }, [pagination, searchTerm, selectedDifficulty, selectedCategory, fetchQuestions]);
 
   const resetPagination = useCallback(() => {
     console.log('Resetting pagination to page 1');
     setPagination(prev => ({ ...prev, currentPage: 1 }));
   }, []);
 
+  
   useEffect(() => {
-    const loadData = async () => {
+    const loadInitialData = async () => {
       setLoading(true);
       await Promise.all([
         fetchCategories(), 
-        fetchQuestions(searchTerm, selectedDifficulty, selectedCategory, 1),
+        fetchQuestions('', '', '', 1),
         fetchBookmarks(),
         fetchProgressStats()
       ]);
@@ -411,10 +403,11 @@ const FlowPage: React.FC = () => {
     };
     
     if (currentUser) {
-      loadData();
+      loadInitialData();
     }
-  }, [currentUser]);
+  }, [currentUser]); 
 
+  
   const debouncedSearch = useCallback((term: string, difficulty: string, category: string, resetPage = true) => {
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current);
@@ -425,10 +418,11 @@ const FlowPage: React.FC = () => {
       if (resetPage) {
         resetPagination();
       }
-      fetchQuestions(term, difficulty, category, resetPage ? 1 : pagination.currentPage);
-    }, 300);
-  }, [resetPagination, pagination.currentPage]);
 
+      fetchQuestions(term, difficulty, category, resetPage ? 1 : 1);
+    }, 300);
+  }, [resetPagination, fetchQuestions]); 
+  
   useEffect(() => {
     if (activeTab === 'questions') {
       console.log('Search parameters changed, triggering debounced search');
@@ -439,8 +433,15 @@ const FlowPage: React.FC = () => {
         clearTimeout(searchTimeoutRef.current);
       }
     };
-  }, [searchTerm, selectedDifficulty, selectedCategory, activeTab]);
+  }, [searchTerm, selectedDifficulty, selectedCategory, activeTab, debouncedSearch]);
 
+
+  useEffect(() => {
+    if (currentUser && activeTab === 'questions') {
+      
+      fetchQuestions(searchTerm, selectedDifficulty, selectedCategory, 1);
+    }
+  }, [questionsPerPage]); 
   const filteredAndSortedQuestions = useMemo(() => {
     let filtered = questions;
     
@@ -473,18 +474,21 @@ const FlowPage: React.FC = () => {
     return filtered;
   }, [questions, showCompleted, sortBy]);
 
-  const groupedQuestions = filteredAndSortedQuestions.reduce((acc, question) => {
-    const categoryId = question.category.id;
-    if (!acc[categoryId]) {
-      acc[categoryId] = {
-        category: question.category,
-        questions: []
-      };
-    }
-    acc[categoryId].questions.push(question);
-    return acc;
-  }, {} as Record<string, { category: any; questions: Question[] }>);
+  const groupedQuestions = useMemo(() => {
+    return filteredAndSortedQuestions.reduce((acc, question) => {
+      const categoryId = question.category.id;
+      if (!acc[categoryId]) {
+        acc[categoryId] = {
+          category: question.category,
+          questions: []
+        };
+      }
+      acc[categoryId].questions.push(question);
+      return acc;
+    }, {} as Record<string, { category: any; questions: Question[] }>);
+  }, [filteredAndSortedQuestions]);
 
+ 
   const handleVoiceCommand = useCallback((command: string) => {
     console.log('Voice command:', command);
     
@@ -510,7 +514,7 @@ const FlowPage: React.FC = () => {
     }
     
     if (command.includes('bulk actions') || command.includes('select multiple')) {
-      setShowBulkActions(!showBulkActions);
+      setShowBulkActions(prev => !prev);
       return;
     }
     
@@ -583,7 +587,7 @@ const FlowPage: React.FC = () => {
     } else if (command.includes('toggle theme') || command.includes('switch theme')) {
       setDarkMode(prev => !prev);
     }
-  }, [categories, showBulkActions, exportProgress, pagination]);
+  }, [categories, exportProgress, pagination, handlePageChange]); 
 
   useEffect(() => {
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
@@ -621,7 +625,7 @@ const FlowPage: React.FC = () => {
     };
   }, [handleVoiceCommand, isListening]);
 
-  const toggleCategory = (categoryId: string) => {
+  const toggleCategory = useCallback((categoryId: string) => {
     setExpandedCategories(prev => {
       const newSet = new Set(prev);
       if (newSet.has(categoryId)) {
@@ -631,9 +635,9 @@ const FlowPage: React.FC = () => {
       }
       return newSet;
     });
-  };
+  }, []);
 
-  const handleQuestionSelect = (questionId: string) => {
+  const handleQuestionSelect = useCallback((questionId: string) => {
     setSelectedQuestions(prev => {
       const newSet = new Set(prev);
       if (newSet.has(questionId)) {
@@ -643,123 +647,117 @@ const FlowPage: React.FC = () => {
       }
       return newSet;
     });
-  };
+  }, []);
 
-  const handleShowDetails = (question: Question) => {
+  const handleShowDetails = useCallback((question: Question) => {
     setSelectedQuestion(question);
     setShowQuestionModal(true);
-  };
-const PaginationControls = () => {
-  const getPageNumbers = () => {
-    const pages = [];
-    const maxVisible = 5;
-    let start = Math.max(1, pagination.currentPage - Math.floor(maxVisible / 2));
-    let end = Math.min(pagination.totalPages, start + maxVisible - 1);
-    
-    if (end - start < maxVisible - 1) {
-      start = Math.max(1, end - maxVisible + 1);
-    }
-    
-    for (let i = start; i <= end; i++) {
-      pages.push(i);
-    }
-    
-    return pages;
-  };
+  }, []);
 
-  if (pagination.totalPages <= 1) return null;
-
-  return (
-    <div className="mt-8 w-full">
-      
-      <div className="flex items-center justify-between px-6 py-4 bg-gray-800 rounded-lg border border-gray-600 shadow-lg">
-    
-        <div className="text-sm text-gray-300">
-          Showing {((pagination.currentPage - 1) * QUESTIONS_PER_PAGE) + 1} to{' '}
-          {Math.min(pagination.currentPage * QUESTIONS_PER_PAGE, pagination.totalItems)} of{' '}
-          {pagination.totalItems} questions
-        </div>
-        
  
-        <div className="flex items-center gap-2">
-          
-          
-          <button
-            onClick={() => handlePageChange(pagination.currentPage - 1)}
-            disabled={!pagination.hasPrev || questionsLoading}
-            className="flex items-center px-4 py-2 text-sm font-medium text-white bg-gray-700 border border-gray-600 rounded-lg hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{ minWidth: '90px' }}
-          >
-            <ChevronLeft size={16} className="mr-1" />
-            Previous
-          </button>
-          
-        
-          {pagination.currentPage > 3 && (
-            <>
-              <button
-                onClick={() => handlePageChange(1)}
-                disabled={questionsLoading}
-                className="px-3 py-2 text-sm font-medium text-white hover:bg-gray-600 rounded-lg disabled:opacity-50"
-                style={{ minWidth: '40px' }}
-              >
-                1
-              </button>
-              {pagination.currentPage > 4 && (
-                <span className="px-2 text-sm text-gray-400">...</span>
-              )}
-            </>
-          )}
+  const PaginationControls = useMemo(() => {
+    const getPageNumbers = () => {
+      const pages = [];
+      const maxVisible = 5;
+      let start = Math.max(1, pagination.currentPage - Math.floor(maxVisible / 2));
+      let end = Math.min(pagination.totalPages, start + maxVisible - 1);
       
-          {getPageNumbers().map(page => (
+      if (end - start < maxVisible - 1) {
+        start = Math.max(1, end - maxVisible + 1);
+      }
+      
+      for (let i = start; i <= end; i++) {
+        pages.push(i);
+      }
+      
+      return pages;
+    };
+
+    if (pagination.totalPages <= 1) return null;
+
+    return (
+      <div className="mt-8 w-full">
+        <div className="flex items-center justify-between px-6 py-4 bg-gray-800 rounded-lg border border-gray-600 shadow-lg">
+          <div className="text-sm text-gray-300">
+            Showing {((pagination.currentPage - 1) * QUESTIONS_PER_PAGE) + 1} to{' '}
+            {Math.min(pagination.currentPage * QUESTIONS_PER_PAGE, pagination.totalItems)} of{' '}
+            {pagination.totalItems} questions
+          </div>
+          
+          <div className="flex items-center gap-2">
             <button
-              key={page}
-              onClick={() => handlePageChange(page)}
-              disabled={questionsLoading}
-              className={`px-3 py-2 text-sm font-medium rounded-lg disabled:opacity-50 ${
-                page === pagination.currentPage
-                  ? 'bg-cyan-600 text-white border border-cyan-500'
-                  : 'text-white hover:bg-gray-600'
-              }`}
-              style={{ minWidth: '40px' }}
+              onClick={() => handlePageChange(pagination.currentPage - 1)}
+              disabled={!pagination.hasPrev || questionsLoading}
+              className="flex items-center px-4 py-2 text-sm font-medium text-white bg-gray-700 border border-gray-600 rounded-lg hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ minWidth: '90px' }}
             >
-              {page}
+              <ChevronLeft size={16} className="mr-1" />
+              Previous
             </button>
-          ))}
-          
-          
-          {pagination.currentPage < pagination.totalPages - 2 && (
-            <>
-              {pagination.currentPage < pagination.totalPages - 3 && (
-                <span className="px-2 text-sm text-gray-400">...</span>
-              )}
+            
+            {pagination.currentPage > 3 && (
+              <>
+                <button
+                  onClick={() => handlePageChange(1)}
+                  disabled={questionsLoading}
+                  className="px-3 py-2 text-sm font-medium text-white hover:bg-gray-600 rounded-lg disabled:opacity-50"
+                  style={{ minWidth: '40px' }}
+                >
+                  1
+                </button>
+                {pagination.currentPage > 4 && (
+                  <span className="px-2 text-sm text-gray-400">...</span>
+                )}
+              </>
+            )}
+        
+            {getPageNumbers().map(page => (
               <button
-                onClick={() => handlePageChange(pagination.totalPages)}
+                key={page}
+                onClick={() => handlePageChange(page)}
                 disabled={questionsLoading}
-                className="px-3 py-2 text-sm font-medium text-white hover:bg-gray-600 rounded-lg disabled:opacity-50"
+                className={`px-3 py-2 text-sm font-medium rounded-lg disabled:opacity-50 ${
+                  page === pagination.currentPage
+                    ? 'bg-cyan-600 text-white border border-cyan-500'
+                    : 'text-white hover:bg-gray-600'
+                }`}
                 style={{ minWidth: '40px' }}
               >
-                {pagination.totalPages}
+                {page}
               </button>
-            </>
-          )}
-          
-       =
-          <button
-            onClick={() => handlePageChange(pagination.currentPage + 1)}
-            disabled={!pagination.hasNext || questionsLoading}
-            className="flex items-center px-4 py-2 text-sm font-medium text-white bg-gray-700 border border-gray-600 rounded-lg hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{ minWidth: '70px' }}
-          >
-            Next
-            <ChevronRight size={16} className="ml-1" />
-          </button>
-          
+            ))}
+            
+            {pagination.currentPage < pagination.totalPages - 2 && (
+              <>
+                {pagination.currentPage < pagination.totalPages - 3 && (
+                  <span className="px-2 text-sm text-gray-400">...</span>
+                )}
+                <button
+                  onClick={() => handlePageChange(pagination.totalPages)}
+                  disabled={questionsLoading}
+                  className="px-3 py-2 text-sm font-medium text-white hover:bg-gray-600 rounded-lg disabled:opacity-50"
+                  style={{ minWidth: '40px' }}
+                >
+                  {pagination.totalPages}
+                </button>
+              </>
+            )}
+            
+            <button
+              onClick={() => handlePageChange(pagination.currentPage + 1)}
+              disabled={!pagination.hasNext || questionsLoading}
+              className="flex items-center px-4 py-2 text-sm font-medium text-white bg-gray-700 border border-gray-600 rounded-lg hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ minWidth: '70px' }}
+            >
+              Next
+              <ChevronRight size={16} className="ml-1" />
+            </button>
+          </div>
         </div>
       </div>
-    </div>
-  );
-};
+    );
+  }, [pagination, QUESTIONS_PER_PAGE, handlePageChange, questionsLoading]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-950 via-slate-900 to-gray-950 dark:from-black dark:via-slate-950 dark:to-black flex items-center justify-center">
@@ -844,7 +842,7 @@ const PaginationControls = () => {
               <div className="mb-6 flex justify-between items-center">
                 <div className="flex items-center gap-4">
                   <button
-                    onClick={() => setShowBulkActions(!showBulkActions)}
+                    onClick={() => setShowBulkActions(prev => !prev)}
                     className={`px-4 py-2 rounded-lg transition-all duration-200 ${
                       showBulkActions 
                         ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30' 
@@ -953,11 +951,10 @@ const PaginationControls = () => {
                         </div>
                       </div>
                     ))
-                    
                 )}
               </div>
 
-             <PaginationControls></PaginationControls>
+              {PaginationControls}
             </div>
           )}
 

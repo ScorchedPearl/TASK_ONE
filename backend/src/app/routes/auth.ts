@@ -3,7 +3,6 @@ import AuthService from '../services/authservice';
 import AuthMiddleware from '../middleware/auth';
 import { JWTError } from '../errors/jwterror';
 import type { CreateCredentialsTokenType, VerifyCredentialsTokenType } from '../user_interface';
-import UserService from '../services/userservice';
 
 const authRouter = Router();
 const authService = AuthService.getInstance();
@@ -359,7 +358,7 @@ authRouter.post('/forgot-password', async (req: Request, res: Response) => {
 
     await authService.generatePasswordResetToken(email.trim());
 
-    // Always return success for security (don't reveal if email exists)
+
     res.status(200).json({
       success: true,
       message: 'If this email exists, you will receive a reset link'

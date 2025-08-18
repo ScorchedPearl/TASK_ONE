@@ -1,10 +1,9 @@
-import nodemailer from 'nodemailer';
+import sgMail from '@sendgrid/mail';
 import crypto from 'crypto';
 import RedisService from './redisservice';
 import * as dotenv from 'dotenv';
 
 dotenv.config();
-
 
 interface EmailTemplate {
   subject: string;
@@ -14,14 +13,17 @@ interface EmailTemplate {
 
 class EmailService {
   private static instance: EmailService;
-  private transporter!: nodemailer.Transporter;
   private redisService: RedisService;
   private readonly EMAIL_VERIFICATION_PREFIX = 'email_verify:';
   private readonly EMAIL_VERIFICATION_EXPIRY = 24 * 60 * 60; 
+  private readonly fromEmail: string;
+  private readonly fromName: string;
 
   private constructor() {
     this.redisService = RedisService.getInstance();
-    this.initializeTransporter();
+    this.fromEmail = process.env.FROM_EMAIL || 'noreply@yourdomain.com';
+    this.fromName = process.env.FROM_NAME || 'PearlChef';
+    this.initializeSendGrid();
   }
 
   public static getInstance(): EmailService {
@@ -31,14 +33,12 @@ class EmailService {
     return EmailService.instance;
   }
 
-  private initializeTransporter(): void {
-    this.transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: process.env.EMAIL_USER || 'pearlautherizer@gmail.com',
-        pass: process.env.APP_PASSWORD 
-      }
-    });
+  private initializeSendGrid(): void {
+    const apiKey = process.env.SENDGRID_API_KEY;
+    if (!apiKey) {
+      throw new Error('SENDGRID_API_KEY environment variable is required');
+    }
+    sgMail.setApiKey(apiKey);
   }
 
   public async sendVerificationEmail(email: string, name: string): Promise<string> {
@@ -55,17 +55,21 @@ class EmailService {
       await this.redisService.setJson(redisKey, verificationData, this.EMAIL_VERIFICATION_EXPIRY);
 
       const verificationUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/verify-email?token=${verificationToken}`;
-
       const emailTemplate = this.getVerificationEmailTemplate(name, verificationUrl);
 
-      await this.transporter.sendMail({
-        from: `"PearlChef" <${process.env.EMAIL_USER || 'noreply@pearlchef.com'}>`,
+      const msg = {
         to: email,
+        from: {
+          email: this.fromEmail,
+          name: this.fromName
+        },
         subject: emailTemplate.subject,
         text: emailTemplate.text,
-        html: emailTemplate.html
-      });
+        html: emailTemplate.html,
+      };
 
+      await sgMail.send(msg);
+      console.log(`Verification email sent to ${email}`);
       return verificationToken;
     } catch (error) {
       console.error('Send verification email failed:', error);
@@ -109,13 +113,19 @@ class EmailService {
       const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?token=${resetToken}`;
       const emailTemplate = this.getPasswordResetEmailTemplate(name, resetUrl);
 
-      await this.transporter.sendMail({
-        from: `"PearlChef" <${process.env.EMAIL_USER || 'noreply@pearlchef.com'}>`,
+      const msg = {
         to: email,
+        from: {
+          email: this.fromEmail,
+          name: this.fromName
+        },
         subject: emailTemplate.subject,
         text: emailTemplate.text,
-        html: emailTemplate.html
-      });
+        html: emailTemplate.html,
+      };
+
+      await sgMail.send(msg);
+      console.log(`Password reset email sent to ${email}`);
     } catch (error) {
       console.error('Send password reset email failed:', error);
       throw new Error('Failed to send password reset email');
@@ -125,7 +135,7 @@ class EmailService {
   private getVerificationEmailTemplate(name: string, verificationUrl: string): EmailTemplate {
     return {
       subject: 'Verify your PearlChef account',
-      text: `Hi ${name},\n\nPlease verify your email address by clicking the link below:\n${verificationUrl}\n\nThis link will expire in 24 hours.\n\nIf you didn't create this account, please ignore this email.\n\nBest regards,\PearlChef Team`,
+      text: `Hi ${name},\n\nPlease verify your email address by clicking the link below:\n${verificationUrl}\n\nThis link will expire in 24 hours.\n\nIf you didn't create this account, please ignore this email.\n\nBest regards,\nPearlChef Team`,
       html: `
         <!DOCTYPE html>
         <html>
@@ -154,7 +164,7 @@ class EmailService {
               </p>
               <div style="border-top: 1px solid #eeeeee; margin-top: 30px; padding-top: 20px;">
                 <p style="color: #999999; font-size: 12px; text-align: center;">
-                  © 2025 Pearl. All rights reserved.
+                  © 2025 PearlChef. All rights reserved.
                 </p>
               </div>
             </div>
@@ -168,7 +178,7 @@ class EmailService {
   private getPasswordResetEmailTemplate(name: string, resetUrl: string): EmailTemplate {
     return {
       subject: 'Reset your PearlChef password',
-      text: `Hi ${name},\n\nYou requested to reset your password. Click the link below to set a new password:\n${resetUrl}\n\nThis link will expire in 30 minutes.\n\nIf you didn't request this, please ignore this email.\n\nBest regards,\PearlChef Team`,
+      text: `Hi ${name},\n\nYou requested to reset your password. Click the link below to set a new password:\n${resetUrl}\n\nThis link will expire in 30 minutes.\n\nIf you didn't request this, please ignore this email.\n\nBest regards,\nPearlChef Team`,
       html: `
         <!DOCTYPE html>
         <html>
@@ -197,7 +207,7 @@ class EmailService {
               </p>
               <div style="border-top: 1px solid #eeeeee; margin-top: 30px; padding-top: 20px;">
                 <p style="color: #999999; font-size: 12px; text-align: center;">
-                  © 2025 Pearl. All rights reserved.
+                  © 2025 PearlChef. All rights reserved.
                 </p>
               </div>
             </div>
@@ -210,14 +220,17 @@ class EmailService {
 
   public async testConnection(): Promise<boolean> {
     try {
-      await this.transporter.verify();
-      console.log('Email service is ready');
+      const apiKey = process.env.SENDGRID_API_KEY;
+      if (!apiKey) {
+        console.error('SendGrid API key not configured');
+        return false;
+      }
+      console.log('SendGrid email service configured successfully');
       return true;
     } catch (error) {
-      console.error('Email service connection failed:', error);
+      console.error('SendGrid configuration failed:', error);
       return false;
     }
   }
 }
-
 export default EmailService;
