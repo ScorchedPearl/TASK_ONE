@@ -17,20 +17,19 @@ services:
     ports:
       - "6379:6379"
     command: ["redis-server", "--requirepass", "yourpassword"]
-    environment:
-      REDIS_PASSWORD: yourpassword
     volumes:
       - redis-data:/data
 
   backend:
-    build: .
+    image: blitzermoon/backend:latest
+    container_name: backend
     restart: always
-    ports:
-      - "8000:8000"
+    expose:
+      - "8000"
     environment:
       JWT_SECRET: my-super-safe-geekheaven-secret-vishwas
       PORT: 8000
-      MONGODB_URL: mongodb://root:example@mongo:27017/geekheaven
+      MONGODB_URL: mongodb://root:example@mongo:27017/geekheaven?authSource=admin
       JWT_ACCESS_EXPIRY: 15m
       JWT_REFRESH_EXPIRY: 7d
       REDIS_HOST: redis
@@ -38,13 +37,11 @@ services:
       REDIS_PASSWORD: yourpassword
       REDIS_DB: 0
       APP_PASSWORD: egjvzollbsxedjni
-      FRONTEND_URL: http://localhost:5173
+      FRONTEND_URL: https://localhost
     depends_on:
       - mongo
       - redis
 
 volumes:
   mongo-data:
-    driver: local
   redis-data:
-    driver: local

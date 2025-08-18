@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { ChevronDown, ChevronRight, BookOpen, Bookmark, BarChart3, BookmarkCheck, CheckCircle, Trophy, Target, Download } from 'lucide-react';
+import { ChevronDown, ChevronRight, BookOpen, Bookmark, BarChart3, BookmarkCheck, CheckCircle, Trophy, Target, Download, ChevronLeft } from 'lucide-react';
 import { useUser } from '@/providers/userprovider';
 import Loader from '@/loading';
 import { useNavigate } from 'react-router-dom';
@@ -85,6 +85,15 @@ const FlowPage: React.FC = () => {
     completionPercentage: 0
   });
   const [loading, setLoading] = useState(true);
+  const [questionsLoading, setQuestionsLoading] = useState(false);
+  
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalItems: 0,
+    hasNext: false,
+    hasPrev: false
+  });
   
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDifficulty, setSelectedDifficulty] = useState<string>('');
@@ -105,14 +114,20 @@ const FlowPage: React.FC = () => {
   const [selectedQuestion, setSelectedQuestion] = useState<Question | null>(null);
   const [showQuestionModal, setShowQuestionModal] = useState(false);
   
-  
   const [isListening, setIsListening] = useState(false);
   const [speechRecognition, setSpeechRecognition] = useState<any>(null);
   
   const searchTimeoutRef = useRef<NodeJS.Timeout>(null);
   const recognitionRef = useRef<any>(null);
-
+  const isFetchingRef = useRef(false); 
   const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
+  const [questionsPerPage, setQuestionsPerPage] = useState(20);
+  const QUESTIONS_PER_PAGE = questionsPerPage;
+
+  const handleQuestionsPerPageChange = (value: number) => {
+    setQuestionsPerPage(value);
+    setPagination(prev => ({ ...prev, currentPage: 1 }));
+  };
 
   useEffect(() => {
     if (!currentUser) {
@@ -124,7 +139,6 @@ const FlowPage: React.FC = () => {
     document.documentElement.classList.toggle('dark', darkMode);
     localStorage.setItem('theme', darkMode ? 'dark' : 'light');
   }, [darkMode]);
-
 
   const fetchCategories = async () => {
     try {
@@ -145,14 +159,28 @@ const FlowPage: React.FC = () => {
     }
   };
 
-  const fetchQuestions = async (search = '', difficulty = '', category = '') => {
+  const fetchQuestions = async (search = '', difficulty = '', category = '', page = 1, fromPagination = false) => {
+    
+    if (isFetchingRef.current) {
+      console.log('Fetch already in progress, skipping...');
+      return;
+    }
+
     try {
+      isFetchingRef.current = true;
+      setQuestionsLoading(true);
+      
       const token = localStorage.getItem('__Pearl_Token');
       const params = new URLSearchParams();
       if (search) params.append('search', search);
       if (difficulty) params.append('difficulty', difficulty);
       if (category) params.append('category', category);
-      params.append('limit', '200');
+      params.append('page', page.toString());
+      params.append('limit', QUESTIONS_PER_PAGE.toString());
+      
+      console.log('Fetching questions with params:', {
+        search, difficulty, category, page, limit: QUESTIONS_PER_PAGE, fromPagination
+      });
       
       const response = await fetch(`${BACKEND_URL}/api/content?${params}`, {
         headers: {
@@ -163,10 +191,37 @@ const FlowPage: React.FC = () => {
       
       if (response.ok) {
         const data: { data: ContentData } = await response.json();
+        console.log('Received pagination data:', data.data.pagination);
+        
         setQuestions(data.data.questions);
-      } 
+        
+        // Update pagination state with validation
+        const newPagination = {
+          currentPage: Math.max(1, data.data.pagination.currentPage || page),
+          totalPages: Math.max(1, data.data.pagination.totalPages || 1),
+          totalItems: Math.max(0, data.data.pagination.totalItems || 0),
+          hasNext: data.data.pagination.hasNext || false,
+          hasPrev: data.data.pagination.hasPrev || false
+        };
+        
+        // Additional validation
+        if (newPagination.currentPage > newPagination.totalPages) {
+          newPagination.currentPage = newPagination.totalPages;
+        }
+        
+        newPagination.hasNext = newPagination.currentPage < newPagination.totalPages;
+        newPagination.hasPrev = newPagination.currentPage > 1;
+        
+        console.log('Setting pagination state to:', newPagination);
+        setPagination(newPagination);
+      } else {
+        console.error('Failed to fetch questions:', response.status, response.statusText);
+      }
     } catch (error) {
       console.error('Failed to fetch questions:', error);
+    } finally {
+      setQuestionsLoading(false);
+      isFetchingRef.current = false;
     }
   };
 
@@ -318,12 +373,37 @@ const FlowPage: React.FC = () => {
     URL.revokeObjectURL(url);
   };
 
+  
+  const handlePageChange = (newPage: number) => {
+    console.log('handlePageChange called with page:', newPage);
+    console.log('Current pagination state:', pagination);
+    
+    if (newPage >= 1 && newPage <= pagination.totalPages && newPage !== pagination.currentPage) {
+      console.log('Page change is valid, fetching questions...');
+      fetchQuestions(searchTerm, selectedDifficulty, selectedCategory, newPage, true);
+      document.querySelector('.questions-section')?.scrollIntoView({ behavior: 'smooth' });
+    } else {
+      console.log('Page change rejected:', {
+        newPage,
+        currentPage: pagination.currentPage,
+        totalPages: pagination.totalPages,
+        isValid: newPage >= 1 && newPage <= pagination.totalPages,
+        isDifferent: newPage !== pagination.currentPage
+      });
+    }
+  };
+
+  const resetPagination = useCallback(() => {
+    console.log('Resetting pagination to page 1');
+    setPagination(prev => ({ ...prev, currentPage: 1 }));
+  }, []);
+
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
       await Promise.all([
         fetchCategories(), 
-        fetchQuestions(),
+        fetchQuestions(searchTerm, selectedDifficulty, selectedCategory, 1),
         fetchBookmarks(),
         fetchProgressStats()
       ]);
@@ -335,26 +415,31 @@ const FlowPage: React.FC = () => {
     }
   }, [currentUser]);
 
-  const debouncedSearch = useCallback((term: string) => {
+  const debouncedSearch = useCallback((term: string, difficulty: string, category: string, resetPage = true) => {
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current);
     }
     
     searchTimeoutRef.current = setTimeout(() => {
-      fetchQuestions(term, selectedDifficulty, selectedCategory);
+      console.log('Debounced search triggered', { term, difficulty, category, resetPage });
+      if (resetPage) {
+        resetPagination();
+      }
+      fetchQuestions(term, difficulty, category, resetPage ? 1 : pagination.currentPage);
     }, 300);
-  }, [selectedDifficulty, selectedCategory]);
+  }, [resetPagination, pagination.currentPage]);
 
   useEffect(() => {
     if (activeTab === 'questions') {
-      debouncedSearch(searchTerm);
+      console.log('Search parameters changed, triggering debounced search');
+      debouncedSearch(searchTerm, selectedDifficulty, selectedCategory, true);
     }
     return () => {
       if (searchTimeoutRef.current) {
         clearTimeout(searchTimeoutRef.current);
       }
     };
-  }, [searchTerm, debouncedSearch, activeTab]);
+  }, [searchTerm, selectedDifficulty, selectedCategory, activeTab]);
 
   const filteredAndSortedQuestions = useMemo(() => {
     let filtered = questions;
@@ -388,7 +473,6 @@ const FlowPage: React.FC = () => {
     return filtered;
   }, [questions, showCompleted, sortBy]);
 
-
   const groupedQuestions = filteredAndSortedQuestions.reduce((acc, question) => {
     const categoryId = question.category.id;
     if (!acc[categoryId]) {
@@ -400,7 +484,6 @@ const FlowPage: React.FC = () => {
     acc[categoryId].questions.push(question);
     return acc;
   }, {} as Record<string, { category: any; questions: Question[] }>);
-
 
   const handleVoiceCommand = useCallback((command: string) => {
     console.log('Voice command:', command);
@@ -433,6 +516,30 @@ const FlowPage: React.FC = () => {
     
     if (command.includes('export progress')) {
       exportProgress();
+      return;
+    }
+    
+    if (command.includes('next page')) {
+      if (pagination.hasNext) {
+        handlePageChange(pagination.currentPage + 1);
+      }
+      return;
+    }
+    
+    if (command.includes('previous page') || command.includes('prev page')) {
+      if (pagination.hasPrev) {
+        handlePageChange(pagination.currentPage - 1);
+      }
+      return;
+    }
+    
+    if (command.includes('first page')) {
+      handlePageChange(1);
+      return;
+    }
+    
+    if (command.includes('last page')) {
+      handlePageChange(pagination.totalPages);
       return;
     }
     
@@ -476,7 +583,7 @@ const FlowPage: React.FC = () => {
     } else if (command.includes('toggle theme') || command.includes('switch theme')) {
       setDarkMode(prev => !prev);
     }
-  }, [categories, showBulkActions, exportProgress]);
+  }, [categories, showBulkActions, exportProgress, pagination]);
 
   useEffect(() => {
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
@@ -542,7 +649,117 @@ const FlowPage: React.FC = () => {
     setSelectedQuestion(question);
     setShowQuestionModal(true);
   };
+const PaginationControls = () => {
+  const getPageNumbers = () => {
+    const pages = [];
+    const maxVisible = 5;
+    let start = Math.max(1, pagination.currentPage - Math.floor(maxVisible / 2));
+    let end = Math.min(pagination.totalPages, start + maxVisible - 1);
+    
+    if (end - start < maxVisible - 1) {
+      start = Math.max(1, end - maxVisible + 1);
+    }
+    
+    for (let i = start; i <= end; i++) {
+      pages.push(i);
+    }
+    
+    return pages;
+  };
 
+  if (pagination.totalPages <= 1) return null;
+
+  return (
+    <div className="mt-8 w-full">
+      
+      <div className="flex items-center justify-between px-6 py-4 bg-gray-800 rounded-lg border border-gray-600 shadow-lg">
+    
+        <div className="text-sm text-gray-300">
+          Showing {((pagination.currentPage - 1) * QUESTIONS_PER_PAGE) + 1} to{' '}
+          {Math.min(pagination.currentPage * QUESTIONS_PER_PAGE, pagination.totalItems)} of{' '}
+          {pagination.totalItems} questions
+        </div>
+        
+ 
+        <div className="flex items-center gap-2">
+          
+          
+          <button
+            onClick={() => handlePageChange(pagination.currentPage - 1)}
+            disabled={!pagination.hasPrev || questionsLoading}
+            className="flex items-center px-4 py-2 text-sm font-medium text-white bg-gray-700 border border-gray-600 rounded-lg hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{ minWidth: '90px' }}
+          >
+            <ChevronLeft size={16} className="mr-1" />
+            Previous
+          </button>
+          
+        
+          {pagination.currentPage > 3 && (
+            <>
+              <button
+                onClick={() => handlePageChange(1)}
+                disabled={questionsLoading}
+                className="px-3 py-2 text-sm font-medium text-white hover:bg-gray-600 rounded-lg disabled:opacity-50"
+                style={{ minWidth: '40px' }}
+              >
+                1
+              </button>
+              {pagination.currentPage > 4 && (
+                <span className="px-2 text-sm text-gray-400">...</span>
+              )}
+            </>
+          )}
+      
+          {getPageNumbers().map(page => (
+            <button
+              key={page}
+              onClick={() => handlePageChange(page)}
+              disabled={questionsLoading}
+              className={`px-3 py-2 text-sm font-medium rounded-lg disabled:opacity-50 ${
+                page === pagination.currentPage
+                  ? 'bg-cyan-600 text-white border border-cyan-500'
+                  : 'text-white hover:bg-gray-600'
+              }`}
+              style={{ minWidth: '40px' }}
+            >
+              {page}
+            </button>
+          ))}
+          
+          
+          {pagination.currentPage < pagination.totalPages - 2 && (
+            <>
+              {pagination.currentPage < pagination.totalPages - 3 && (
+                <span className="px-2 text-sm text-gray-400">...</span>
+              )}
+              <button
+                onClick={() => handlePageChange(pagination.totalPages)}
+                disabled={questionsLoading}
+                className="px-3 py-2 text-sm font-medium text-white hover:bg-gray-600 rounded-lg disabled:opacity-50"
+                style={{ minWidth: '40px' }}
+              >
+                {pagination.totalPages}
+              </button>
+            </>
+          )}
+          
+       =
+          <button
+            onClick={() => handlePageChange(pagination.currentPage + 1)}
+            disabled={!pagination.hasNext || questionsLoading}
+            className="flex items-center px-4 py-2 text-sm font-medium text-white bg-gray-700 border border-gray-600 rounded-lg hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{ minWidth: '70px' }}
+          >
+            Next
+            <ChevronRight size={16} className="ml-1" />
+          </button>
+          
+        </div>
+      </div>
+    </div>
+  );
+};
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-950 via-slate-900 to-gray-950 dark:from-black dark:via-slate-950 dark:to-black flex items-center justify-center">
@@ -575,7 +792,7 @@ const FlowPage: React.FC = () => {
               >
                 <div className="flex items-center gap-2">
                   <BookOpen size={16} />
-                  All Questions ({questions.length})
+                  All Questions ({pagination.totalItems || questions.length})
                 </div>
               </button>
               <button
@@ -607,9 +824,8 @@ const FlowPage: React.FC = () => {
             </nav>
           </div>
 
-
           {activeTab === 'questions' && (
-            <>
+            <div className="questions-section">
               <SearchFilters
                 searchTerm={searchTerm}
                 setSearchTerm={setSearchTerm}
@@ -668,16 +884,21 @@ const FlowPage: React.FC = () => {
                 </button>
               </div>
 
-            
+              {questionsLoading && (
+                <div className="flex justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-400"></div>
+                </div>
+              )}
+
               <div className="space-y-6">
-                {Object.entries(groupedQuestions).length === 0 ? (
+                {!questionsLoading && Object.entries(groupedQuestions).length === 0 ? (
                   <div className="text-center py-12">
                     <div className="text-gray-500 text-lg">
                       No questions found matching your criteria
                     </div>
                   </div>
                 ) : (
-                  Object.entries(groupedQuestions)
+                  !questionsLoading && Object.entries(groupedQuestions)
                     .sort(([, a], [, b]) => a.category.slNo - b.category.slNo)
                     .map(([categoryId, { category, questions }], index) => (
                       <div
@@ -732,12 +953,14 @@ const FlowPage: React.FC = () => {
                         </div>
                       </div>
                     ))
+                    
                 )}
               </div>
-            </>
+
+             <PaginationControls></PaginationControls>
+            </div>
           )}
 
-  
           {activeTab === 'bookmarks' && (
             <div className="space-y-6 min-h-[400px]">
               {bookmarks.length === 0 ? (
@@ -787,7 +1010,6 @@ const FlowPage: React.FC = () => {
             </div>
           )}
 
-  
           {activeTab === 'progress' && (
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
