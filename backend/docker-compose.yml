@@ -38,7 +38,7 @@ services:
       REDIS_PASSWORD: yourpassword
       REDIS_DB: 0
       APP_PASSWORD: egjvzollbsxedjni
-      FRONTEND_URL: https://pearlchef.pearl99z.tech/
+      FRONTEND_URL: http://
       SENDGRID_API_KEY: 
       FROM_EMAIL: pearlautherizer@gmail.com
       FROM_NAME: PearlChef
