@@ -15,11 +15,11 @@ function App() {
       <Routes>
         <Route path="/" element={<Layout />}>
           <Route index element={<Home />} />
-          <Route path="auth" element={<Auth />} />
-          <Route path="flow" element={<FlowPage />} />
-          <Route path="verify-email" element={<EmailVerificationPage />} />
-          <Route path="reset-password" element={<PasswordResetPage/>} />
-          <Route path="profile" element={<ProfilePage />} />
+          <Route path="/auth" element={<Auth />} />
+          <Route path="/flow" element={<FlowPage />} />
+          <Route path="/verify-email" element={<EmailVerificationPage />} />
+          <Route path="/reset-password" element={<PasswordResetPage/>} />
+          <Route path="/profile" element={<ProfilePage />} />
           <Route path="*" element={<Error/>} />
         </Route>
 
