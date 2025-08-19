@@ -104,17 +104,6 @@ export default function ProfilePage() {
        </div>
       </div>
      </div>
-
-     <div className="pt-4 sm:pt-6 border-t border-slate-700/50">
-      <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-       <button className="flex-1 bg-gradient-to-r from-teal-600 to-teal-500 hover:from-teal-700 hover:to-teal-600 text-white font-medium py-2 sm:py-3 px-4 sm:px-6 rounded-lg transition-all duration-200 text-sm sm:text-base">
-        Edit Profile
-       </button>
-       <button className="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-medium py-2 sm:py-3 px-4 sm:px-6 rounded-lg transition-all duration-200 text-sm sm:text-base">
-        Settings
-       </button>
-      </div>
-     </div>
     </div>
    </Card>
   </div>
