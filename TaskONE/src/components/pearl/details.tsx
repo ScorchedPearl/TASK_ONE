@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, CheckCircle, Bookmark, BookmarkCheck, Play, ExternalLink, BookOpen, Clock, Calendar, Tag, Trophy, Star } from 'lucide-react';
+import { X, CheckCircle,Play, ExternalLink, BookOpen, Clock, Calendar, Tag, Trophy, Star } from 'lucide-react';
 
 interface Question {
   id: string;
@@ -38,8 +38,6 @@ const QuestionModal: React.FC<QuestionModalProps> = ({
   question,
   isOpen,
   onClose,
-  onToggleProgress,
-  onToggleBookmark
 }) => {
   const [activeTab, setActiveTab] = useState<'description' | 'hints' | 'solution'>('description');
   const [showSolution, setShowSolution] = useState(false);
@@ -237,31 +235,8 @@ const QuestionModal: React.FC<QuestionModalProps> = ({
             <h3 className="text-base sm:text-lg font-semibold text-gray-200 mb-3 sm:mb-4">Actions</h3>
             
             <div className="grid grid-cols-2 xl:grid-cols-1 gap-2 sm:gap-3">
-              <button
-                onClick={() => onToggleProgress(question.id)}
-                className={`flex items-center gap-2 sm:gap-3 px-3 py-2 sm:px-4 sm:py-3 rounded-lg transition-all duration-200 text-xs sm:text-sm ${
-                  question.isCompleted
-                    ? 'bg-green-500/20 text-green-300 border border-green-500/30'
-                    : 'bg-gray-700/50 text-gray-300 hover:bg-green-500/20 hover:text-green-300 border border-gray-600/50'
-                }`}
-              >
-                <CheckCircle size={16} />
-                <span className="hidden sm:inline">{question.isCompleted ? 'Mark Incomplete' : 'Mark Complete'}</span>
-                <span className="sm:hidden">{question.isCompleted ? 'Incomplete' : 'Complete'}</span>
-              </button>
-
-              <button
-                onClick={() => onToggleBookmark(question.id)}
-                className={`flex items-center gap-2 sm:gap-3 px-3 py-2 sm:px-4 sm:py-3 rounded-lg transition-all duration-200 text-xs sm:text-sm ${
-                  question.isBookmarked
-                    ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
-                    : 'bg-gray-700/50 text-gray-300 hover:bg-blue-500/20 hover:text-blue-300 border border-gray-600/50'
-                }`}
-              >
-                {question.isBookmarked ? <BookmarkCheck size={16}  /> : <Bookmark size={16} />}
-                <span className="hidden sm:inline">{question.isBookmarked ? 'Remove Bookmark' : 'Add Bookmark'}</span>
-                <span className="sm:hidden">{question.isBookmarked ? 'Remove' : 'Bookmark'}</span>
-              </button>
+              
+      
 
               {question.ytLink && (
                 <a
