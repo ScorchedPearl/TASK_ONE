@@ -123,7 +123,6 @@ const FlowPage: React.FC = () => {
   const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
   const [questionsPerPage] = useState(20);
 
-
   const QUESTIONS_PER_PAGE = useMemo(() => questionsPerPage, [questionsPerPage]);
 
   useEffect(() => {
@@ -367,7 +366,6 @@ const FlowPage: React.FC = () => {
     URL.revokeObjectURL(url);
   }, [currentUser?.name, progressStats, questions, bookmarks]);
 
- 
   const handlePageChange = useCallback((newPage: number) => {
     console.log('handlePageChange called with page:', newPage);
     console.log('Current pagination state:', pagination);
@@ -384,7 +382,6 @@ const FlowPage: React.FC = () => {
     setPagination(prev => ({ ...prev, currentPage: 1 }));
   }, []);
 
-  
   useEffect(() => {
     const loadInitialData = async () => {
       setLoading(true);
@@ -402,7 +399,6 @@ const FlowPage: React.FC = () => {
     }
   }, [currentUser]); 
 
-  
   const debouncedSearch = useCallback((term: string, difficulty: string, category: string, resetPage = true) => {
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current);
@@ -430,13 +426,12 @@ const FlowPage: React.FC = () => {
     };
   }, [searchTerm, selectedDifficulty, selectedCategory, activeTab, debouncedSearch]);
 
-
   useEffect(() => {
     if (currentUser && activeTab === 'questions') {
-      
       fetchQuestions(searchTerm, selectedDifficulty, selectedCategory, 1);
     }
   }, [questionsPerPage]); 
+
   const filteredAndSortedQuestions = useMemo(() => {
     let filtered = questions;
     
@@ -483,7 +478,6 @@ const FlowPage: React.FC = () => {
     }, {} as Record<string, { category: any; questions: Question[] }>);
   }, [filteredAndSortedQuestions]);
 
- 
   const handleVoiceCommand = useCallback((command: string) => {
     console.log('Voice command:', command);
     
@@ -649,11 +643,10 @@ const FlowPage: React.FC = () => {
     setShowQuestionModal(true);
   }, []);
 
- 
   const PaginationControls = useMemo(() => {
     const getPageNumbers = () => {
       const pages = [];
-      const maxVisible = 5;
+      const maxVisible = window.innerWidth < 640 ? 3 : 5;
       let start = Math.max(1, pagination.currentPage - Math.floor(maxVisible / 2));
       let end = Math.min(pagination.totalPages, start + maxVisible - 1);
       
@@ -671,23 +664,23 @@ const FlowPage: React.FC = () => {
     if (pagination.totalPages <= 1) return null;
 
     return (
-      <div className="mt-8 w-full">
-        <div className="flex items-center justify-between px-6 py-4 bg-gray-800 rounded-lg border border-gray-600 shadow-lg">
-          <div className="text-sm text-gray-300">
+      <div className="mt-6 sm:mt-8 w-full">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 px-4 sm:px-6 py-4 bg-gray-800 rounded-lg border border-gray-600 shadow-lg">
+          <div className="text-xs sm:text-sm text-gray-300 text-center sm:text-left">
             Showing {((pagination.currentPage - 1) * QUESTIONS_PER_PAGE) + 1} to{' '}
             {Math.min(pagination.currentPage * QUESTIONS_PER_PAGE, pagination.totalItems)} of{' '}
             {pagination.totalItems} questions
           </div>
           
-          <div className="flex items-center gap-2">
+          <div className="flex items-center justify-center gap-1 sm:gap-2 overflow-x-auto">
             <button
               onClick={() => handlePageChange(pagination.currentPage - 1)}
               disabled={!pagination.hasPrev || questionsLoading}
-              className="flex items-center px-4 py-2 text-sm font-medium text-white bg-gray-700 border border-gray-600 rounded-lg hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{ minWidth: '90px' }}
+              className="flex items-center px-2 sm:px-4 py-2 text-xs sm:text-sm font-medium text-white bg-gray-700 border border-gray-600 rounded-lg hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
             >
-              <ChevronLeft size={16} className="mr-1" />
-              Previous
+              <ChevronLeft size={14} className="sm:mr-1" />
+              <span className="hidden sm:inline">Previous</span>
+              <span className="sm:hidden">Prev</span>
             </button>
             
             {pagination.currentPage > 3 && (
@@ -695,13 +688,12 @@ const FlowPage: React.FC = () => {
                 <button
                   onClick={() => handlePageChange(1)}
                   disabled={questionsLoading}
-                  className="px-3 py-2 text-sm font-medium text-white hover:bg-gray-600 rounded-lg disabled:opacity-50"
-                  style={{ minWidth: '40px' }}
+                  className="px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium text-white hover:bg-gray-600 rounded-lg disabled:opacity-50 min-w-[32px] sm:min-w-[40px]"
                 >
                   1
                 </button>
                 {pagination.currentPage > 4 && (
-                  <span className="px-2 text-sm text-gray-400">...</span>
+                  <span className="px-1 sm:px-2 text-xs sm:text-sm text-gray-400">...</span>
                 )}
               </>
             )}
@@ -711,12 +703,11 @@ const FlowPage: React.FC = () => {
                 key={page}
                 onClick={() => handlePageChange(page)}
                 disabled={questionsLoading}
-                className={`px-3 py-2 text-sm font-medium rounded-lg disabled:opacity-50 ${
+                className={`px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium rounded-lg disabled:opacity-50 min-w-[32px] sm:min-w-[40px] ${
                   page === pagination.currentPage
                     ? 'bg-cyan-600 text-white border border-cyan-500'
                     : 'text-white hover:bg-gray-600'
                 }`}
-                style={{ minWidth: '40px' }}
               >
                 {page}
               </button>
@@ -725,13 +716,12 @@ const FlowPage: React.FC = () => {
             {pagination.currentPage < pagination.totalPages - 2 && (
               <>
                 {pagination.currentPage < pagination.totalPages - 3 && (
-                  <span className="px-2 text-sm text-gray-400">...</span>
+                  <span className="px-1 sm:px-2 text-xs sm:text-sm text-gray-400">...</span>
                 )}
                 <button
                   onClick={() => handlePageChange(pagination.totalPages)}
                   disabled={questionsLoading}
-                  className="px-3 py-2 text-sm font-medium text-white hover:bg-gray-600 rounded-lg disabled:opacity-50"
-                  style={{ minWidth: '40px' }}
+                  className="px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium text-white hover:bg-gray-600 rounded-lg disabled:opacity-50 min-w-[32px] sm:min-w-[40px]"
                 >
                   {pagination.totalPages}
                 </button>
@@ -741,11 +731,11 @@ const FlowPage: React.FC = () => {
             <button
               onClick={() => handlePageChange(pagination.currentPage + 1)}
               disabled={!pagination.hasNext || questionsLoading}
-              className="flex items-center px-4 py-2 text-sm font-medium text-white bg-gray-700 border border-gray-600 rounded-lg hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{ minWidth: '70px' }}
+              className="flex items-center px-2 sm:px-4 py-2 text-xs sm:text-sm font-medium text-white bg-gray-700 border border-gray-600 rounded-lg hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
             >
-              Next
-              <ChevronRight size={16} className="ml-1" />
+              <span className="hidden sm:inline">Next</span>
+              <span className="sm:hidden">Next</span>
+              <ChevronRight size={14} className="sm:ml-1" />
             </button>
           </div>
         </div>
@@ -772,45 +762,48 @@ const FlowPage: React.FC = () => {
           onVoiceCommand={handleVoiceCommand}
         />
 
-        <main className="max-w-7xl mx-auto px-6 py-8">
-          <div className="mb-8 border-b border-gray-800/50 dark:border-gray-700/50">
-            <nav className="flex space-x-8">
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
+          {/* Responsive Tabs Navigation */}
+          <div className="mb-6 sm:mb-8 border-b border-gray-800/50 dark:border-gray-700/50">
+            <nav className="flex space-x-4 sm:space-x-8 overflow-x-auto">
               <button
                 onClick={() => setActiveTab('questions')}
-                className={`pb-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                className={`pb-4 px-1 border-b-2 font-medium text-xs sm:text-sm transition-colors whitespace-nowrap ${
                   activeTab === 'questions'
                     ? 'border-cyan-500 text-cyan-400'
                     : 'border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-300'
                 }`}
               >
-                <div className="flex items-center gap-2">
-                  <BookOpen size={16} />
-                  All Questions ({pagination.totalItems || questions.length})
+                <div className="flex items-center gap-1 sm:gap-2">
+                  <BookOpen size={14} className="sm:w-4 sm:h-4" />
+                  <span className="hidden sm:inline">All Questions</span>
+                  <span className="sm:hidden">Questions</span>
+                  <span className="text-xs">({pagination.totalItems || questions.length})</span>
                 </div>
               </button>
               <button
                 onClick={() => setActiveTab('bookmarks')}
-                className={`pb-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                className={`pb-4 px-1 border-b-2 font-medium text-xs sm:text-sm transition-colors whitespace-nowrap ${
                   activeTab === 'bookmarks'
                     ? 'border-cyan-500 text-cyan-400'
                     : 'border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-300'
                 }`}
               >
-                <div className="flex items-center gap-2">
-                  <Bookmark size={16} />
+                <div className="flex items-center gap-1 sm:gap-2">
+                  <Bookmark size={14} className="sm:w-4 sm:h-4" />
                   Bookmarks ({bookmarks.length})
                 </div>
               </button>
               <button
                 onClick={() => setActiveTab('progress')}
-                className={`pb-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                className={`pb-4 px-1 border-b-2 font-medium text-xs sm:text-sm transition-colors whitespace-nowrap ${
                   activeTab === 'progress'
                     ? 'border-cyan-500 text-cyan-400'
                     : 'border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-300'
                 }`}
               >
-                <div className="flex items-center gap-2">
-                  <BarChart3 size={16} />
+                <div className="flex items-center gap-1 sm:gap-2">
+                  <BarChart3 size={14} className="sm:w-4 sm:h-4" />
                   Progress ({progressStats.completionPercentage}%)
                 </div>
               </button>
@@ -834,11 +827,12 @@ const FlowPage: React.FC = () => {
                 setShowCompleted={setShowCompleted}
               />
 
-              <div className="mb-6 flex justify-between items-center">
-                <div className="flex items-center gap-4">
+
+              <div className="mb-4 sm:mb-6 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
                   <button
                     onClick={() => setShowBulkActions(prev => !prev)}
-                    className={`px-4 py-2 rounded-lg transition-all duration-200 ${
+                    className={`px-3 sm:px-4 py-2 rounded-lg transition-all duration-200 text-sm ${
                       showBulkActions 
                         ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30' 
                         : 'bg-gray-800/50 text-gray-300 hover:bg-gray-700/50 border border-gray-600/50'
@@ -848,19 +842,19 @@ const FlowPage: React.FC = () => {
                   </button>
                   
                   {showBulkActions && selectedQuestions.size > 0 && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-gray-400">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-xs sm:text-sm text-gray-400">
                         {selectedQuestions.size} selected
                       </span>
                       <button
                         onClick={handleBulkComplete}
-                        className="px-3 py-1 bg-green-500/20 text-green-300 hover:bg-green-500/30 border border-green-500/30 rounded-md text-sm transition-all duration-200"
+                        className="px-2 sm:px-3 py-1 bg-green-500/20 text-green-300 hover:bg-green-500/30 border border-green-500/30 rounded-md text-xs sm:text-sm transition-all duration-200"
                       >
                         Mark Complete
                       </button>
                       <button
                         onClick={handleBulkBookmark}
-                        className="px-3 py-1 bg-blue-500/20 text-blue-300 hover:bg-blue-500/30 border border-blue-500/30 rounded-md text-sm transition-all duration-200"
+                        className="px-2 sm:px-3 py-1 bg-blue-500/20 text-blue-300 hover:bg-blue-500/30 border border-blue-500/30 rounded-md text-xs sm:text-sm transition-all duration-200"
                       >
                         Bookmark
                       </button>
@@ -870,23 +864,23 @@ const FlowPage: React.FC = () => {
 
                 <button
                   onClick={exportProgress}
-                  className="flex items-center gap-2 px-4 py-2 bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 border border-purple-500/30 rounded-lg text-sm transition-all duration-200"
+                  className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 border border-purple-500/30 rounded-lg text-xs sm:text-sm transition-all duration-200"
                 >
-                  <Download size={16} />
+                  <Download size={14} className="sm:w-4 sm:h-4" />
                   Export Progress
                 </button>
               </div>
 
               {questionsLoading && (
                 <div className="flex justify-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-400"></div>
+                  <div className="animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-b-2 border-cyan-400"></div>
                 </div>
               )}
 
-              <div className="space-y-6">
+              <div className="space-y-4 sm:space-y-6">
                 {!questionsLoading && Object.entries(groupedQuestions).length === 0 ? (
-                  <div className="text-center py-12">
-                    <div className="text-gray-500 text-lg">
+                  <div className="text-center py-8 sm:py-12">
+                    <div className="text-gray-500 text-base sm:text-lg">
                       No questions found matching your criteria
                     </div>
                   </div>
@@ -901,29 +895,32 @@ const FlowPage: React.FC = () => {
                       >
                         <button
                           onClick={() => toggleCategory(categoryId)}
-                          className="w-full px-6 py-4 flex items-center justify-between bg-gray-800/30 dark:bg-gray-900/30 hover:bg-gray-700/40 dark:hover:bg-gray-800/40 transition-all duration-300"
+                          className="w-full px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between bg-gray-800/30 dark:bg-gray-900/30 hover:bg-gray-700/40 dark:hover:bg-gray-800/40 transition-all duration-300"
                         >
-                          <div className="flex items-center space-x-3">
-                            <span className="text-sm font-medium text-cyan-400 bg-cyan-500/20 px-3 py-1 rounded-full border border-cyan-500/30">
+                          <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
+                            <span className="text-xs sm:text-sm font-medium text-cyan-400 bg-cyan-500/20 px-2 sm:px-3 py-1 rounded-full border border-cyan-500/30 whitespace-nowrap">
                               #{category.slNo}
                             </span>
-                            <h2 className="text-xl font-semibold text-gray-100 dark:text-gray-200 drop-shadow-sm">
+                            <h2 className="text-base sm:text-xl font-semibold text-gray-100 dark:text-gray-200 drop-shadow-sm truncate">
                               {category.title}
                             </h2>
-                            <span className="text-sm text-gray-400 dark:text-gray-500">
-                              ({questions.length} questions)
-                            </span>
-                            <div className="text-xs text-gray-500">
-                              {questions.filter(q => q.isCompleted).length} completed
+                            <div className="hidden sm:flex items-center gap-2 text-xs sm:text-sm text-gray-400 dark:text-gray-500">
+                              <span>({questions.length} questions)</span>
+                              <span>{questions.filter(q => q.isCompleted).length} completed</span>
                             </div>
                           </div>
-                          <div className="transform transition-transform duration-300">
+                          <div className="transform transition-transform duration-300 flex-shrink-0">
                             {expandedCategories.has(categoryId) ? 
-                              <ChevronDown size={20} className="text-gray-400" /> : 
-                              <ChevronRight size={20} className="text-gray-400" />
+                              <ChevronDown size={18} className="sm:w-5 sm:h-5 text-gray-400" /> : 
+                              <ChevronRight size={18} className="sm:w-5 sm:h-5 text-gray-400" />
                             }
                           </div>
                         </button>
+
+            
+                        <div className="sm:hidden px-4 pb-2 text-xs text-gray-400 dark:text-gray-500">
+                          {questions.length} questions • {questions.filter(q => q.isCompleted).length} completed
+                        </div>
 
                         <div className={`overflow-hidden transition-all duration-500 ease-in-out ${
                           expandedCategories.has(categoryId) ? 'max-h-none opacity-100' : 'max-h-0 opacity-0'
@@ -954,18 +951,18 @@ const FlowPage: React.FC = () => {
           )}
 
           {activeTab === 'bookmarks' && (
-            <div className="space-y-6 min-h-[400px]">
+            <div className="space-y-4 sm:space-y-6 min-h-[400px]">
               {bookmarks.length === 0 ? (
-                <div className="text-center py-12">
-                  <Bookmark className="w-16 h-16 text-gray-500 mx-auto mb-4" />
-                  <div className="text-gray-500 text-lg mb-2">No bookmarks yet</div>
+                <div className="text-center py-8 sm:py-12">
+                  <Bookmark className="w-12 h-12 sm:w-16 sm:h-16 text-gray-500 mx-auto mb-4" />
+                  <div className="text-gray-500 text-base sm:text-lg mb-2">No bookmarks yet</div>
                   <div className="text-gray-600 text-sm">Start bookmarking questions to see them here</div>
                 </div>
               ) : (
                 <div className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 dark:from-gray-900/50 dark:to-black/50 rounded-xl border border-gray-700/50 dark:border-gray-600/50 overflow-hidden backdrop-blur-sm shadow-2xl">
-                  <div className="px-6 py-4 bg-gray-800/30 dark:bg-gray-900/30">
-                    <h2 className="text-xl font-semibold text-gray-100 dark:text-gray-200 flex items-center gap-2">
-                      <BookmarkCheck className="text-blue-400" size={20} />
+                  <div className="px-4 sm:px-6 py-3 sm:py-4 bg-gray-800/30 dark:bg-gray-900/30">
+                    <h2 className="text-lg sm:text-xl font-semibold text-gray-100 dark:text-gray-200 flex items-center gap-2">
+                      <BookmarkCheck className="text-blue-400 w-5 h-5 sm:w-6 sm:h-6" />
                       Your Bookmarks ({bookmarks.length})
                     </h2>
                   </div>
@@ -1003,74 +1000,75 @@ const FlowPage: React.FC = () => {
           )}
 
           {activeTab === 'progress' && (
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 dark:from-gray-900/50 dark:to-black/50 rounded-xl border border-gray-700/50 dark:border-gray-600/50 p-6 backdrop-blur-sm">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-gray-100 dark:text-gray-200">Total Questions</h3>
-                    <Target className="text-gray-400" size={24} />
+            <div className="space-y-4 sm:space-y-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                <div className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 dark:from-gray-900/50 dark:to-black/50 rounded-xl border border-gray-700/50 dark:border-gray-600/50 p-4 sm:p-6 backdrop-blur-sm">
+                  <div className="flex items-center justify-between mb-3 sm:mb-4">
+                    <h3 className="text-base sm:text-lg font-semibold text-gray-100 dark:text-gray-200">Total Questions</h3>
+                    <Target className="text-gray-400 w-5 h-5 sm:w-6 sm:h-6" />
                   </div>
-                  <div className="text-3xl font-bold text-cyan-400 mb-2">{progressStats.totalQuestions}</div>
-                  <div className="text-sm text-gray-500 dark:text-gray-400">Available to solve</div>
+                  <div className="text-2xl sm:text-3xl font-bold text-cyan-400 mb-2">{progressStats.totalQuestions}</div>
+                  <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Available to solve</div>
                 </div>
 
-                <div className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 dark:from-gray-900/50 dark:to-black/50 rounded-xl border border-gray-700/50 dark:border-gray-600/50 p-6 backdrop-blur-sm">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-gray-100 dark:text-gray-200">Completed</h3>
-                    <CheckCircle className="text-green-400" size={24} />
+                <div className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 dark:from-gray-900/50 dark:to-black/50 rounded-xl border border-gray-700/50 dark:border-gray-600/50 p-4 sm:p-6 backdrop-blur-sm">
+                  <div className="flex items-center justify-between mb-3 sm:mb-4">
+                    <h3 className="text-base sm:text-lg font-semibold text-gray-100 dark:text-gray-200">Completed</h3>
+                    <CheckCircle className="text-green-400 w-5 h-5 sm:w-6 sm:h-6" />
                   </div>
-                  <div className="text-3xl font-bold text-green-400 mb-2">{progressStats.completedQuestions}</div>
-                  <div className="text-sm text-gray-500 dark:text-gray-400">Questions solved</div>
+                  <div className="text-2xl sm:text-3xl font-bold text-green-400 mb-2">{progressStats.completedQuestions}</div>
+                  <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Questions solved</div>
                 </div>
 
-                <div className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 dark:from-gray-900/50 dark:to-black/50 rounded-xl border border-gray-700/50 dark:border-gray-600/50 p-6 backdrop-blur-sm">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-gray-100 dark:text-gray-200">Progress</h3>
-                    <Trophy className="text-yellow-400" size={24} />
+                <div className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 dark:from-gray-900/50 dark:to-black/50 rounded-xl border border-gray-700/50 dark:border-gray-600/50 p-4 sm:p-6 backdrop-blur-sm sm:col-span-2 lg:col-span-1">
+                  <div className="flex items-center justify-between mb-3 sm:mb-4">
+                    <h3 className="text-base sm:text-lg font-semibold text-gray-100 dark:text-gray-200">Progress</h3>
+                    <Trophy className="text-yellow-400 w-5 h-5 sm:w-6 sm:h-6" />
                   </div>
-                  <div className="text-3xl font-bold text-yellow-400 mb-2">{progressStats.completionPercentage}%</div>
-                  <div className="text-sm text-gray-500 dark:text-gray-400">Completion rate</div>
+                  <div className="text-2xl sm:text-3xl font-bold text-yellow-400 mb-2">{progressStats.completionPercentage}%</div>
+                  <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Completion rate</div>
                 </div>
               </div>
 
-              <div className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 dark:from-gray-900/50 dark:to-black/50 rounded-xl border border-gray-700/50 dark:border-gray-600/50 p-6 backdrop-blur-sm">
-                <h3 className="text-lg font-semibold text-gray-100 dark:text-gray-200 mb-4 flex items-center gap-2">
-                  <BarChart3 className="text-cyan-400" size={20} />
+      
+              <div className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 dark:from-gray-900/50 dark:to-black/50 rounded-xl border border-gray-700/50 dark:border-gray-600/50 p-4 sm:p-6 backdrop-blur-sm">
+                <h3 className="text-base sm:text-lg font-semibold text-gray-100 dark:text-gray-200 mb-3 sm:mb-4 flex items-center gap-2">
+                  <BarChart3 className="text-cyan-400 w-5 h-5 sm:w-6 sm:h-6" />
                   Progress Overview
                 </h3>
                 <div className="space-y-4">
                   <div>
-                    <div className="flex justify-between text-sm mb-2">
+                    <div className="flex justify-between text-xs sm:text-sm mb-2">
                       <span className="text-gray-300 dark:text-gray-400">Overall Progress</span>
                       <span className="text-gray-300 dark:text-gray-400">{progressStats.completedQuestions}/{progressStats.totalQuestions}</span>
                     </div>
-                    <div className="w-full bg-gray-700 dark:bg-gray-800 rounded-full h-3">
+                    <div className="w-full bg-gray-700 dark:bg-gray-800 rounded-full h-2 sm:h-3">
                       <div 
-                        className="bg-gradient-to-r from-cyan-400 to-blue-500 h-3 rounded-full transition-all duration-500"
+                        className="bg-gradient-to-r from-cyan-400 to-blue-500 h-2 sm:h-3 rounded-full transition-all duration-500"
                         style={{ width: `${progressStats.completionPercentage}%` }}
                       ></div>
                     </div>
                   </div>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
-                    <div className="text-center p-4 bg-gray-700/30 dark:bg-gray-800/30 rounded-lg">
-                      <div className="text-2xl font-bold text-green-400 mb-1">
+                  <div className="grid grid-cols-3 gap-2 sm:gap-4 mt-4 sm:mt-6">
+                    <div className="text-center p-2 sm:p-4 bg-gray-700/30 dark:bg-gray-800/30 rounded-lg">
+                      <div className="text-lg sm:text-2xl font-bold text-green-400 mb-1">
                         {progressStats.easyCompleted || Math.floor((progressStats.completedQuestions / 3))}
                       </div>
                       <div className="text-xs text-gray-500 dark:text-gray-400">
                         Easy ({progressStats.easyTotal || Math.floor(progressStats.totalQuestions / 3)})
                       </div>
                     </div>
-                    <div className="text-center p-4 bg-gray-700/30 dark:bg-gray-800/30 rounded-lg">
-                      <div className="text-2xl font-bold text-yellow-400 mb-1">
+                    <div className="text-center p-2 sm:p-4 bg-gray-700/30 dark:bg-gray-800/30 rounded-lg">
+                      <div className="text-lg sm:text-2xl font-bold text-yellow-400 mb-1">
                         {progressStats.mediumCompleted || Math.floor((progressStats.completedQuestions / 3))}
                       </div>
                       <div className="text-xs text-gray-500 dark:text-gray-400">
                         Medium ({progressStats.mediumTotal || Math.floor(progressStats.totalQuestions / 3)})
                       </div>
                     </div>
-                    <div className="text-center p-4 bg-gray-700/30 dark:bg-gray-800/30 rounded-lg">
-                      <div className="text-2xl font-bold text-red-400 mb-1">
+                    <div className="text-center p-2 sm:p-4 bg-gray-700/30 dark:bg-gray-800/30 rounded-lg">
+                      <div className="text-lg sm:text-2xl font-bold text-red-400 mb-1">
                         {progressStats.hardCompleted || Math.floor((progressStats.completedQuestions / 3))}
                       </div>
                       <div className="text-xs text-gray-500 dark:text-gray-400">
@@ -1084,9 +1082,10 @@ const FlowPage: React.FC = () => {
           )}
         </main>
 
-        <footer className="mt-16 py-8 border-t border-gray-800/50 dark:border-gray-700/50 bg-gray-900/30 dark:bg-black/30">
-          <div className="max-w-7xl mx-auto px-6 text-center">
-            <p className="text-gray-500 dark:text-gray-400 text-sm">
+
+        <footer className="mt-8 sm:mt-16 py-6 sm:py-8 border-t border-gray-800/50 dark:border-gray-700/50 bg-gray-900/30 dark:bg-black/30">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 text-center">
+            <p className="text-gray-500 dark:text-gray-400 text-xs sm:text-sm">
               © 2024 PearlChef. Elevating your coding journey with modern tools.
             </p>
           </div>
