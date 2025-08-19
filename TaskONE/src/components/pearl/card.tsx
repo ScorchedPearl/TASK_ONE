@@ -1,4 +1,5 @@
-import  { useState } from 'react';
+
+import { useState } from 'react';
 import { 
   CheckCircle, 
   Bookmark, 
@@ -58,10 +59,10 @@ const QuestionCard: React.FC<QuestionCardProps> = ({
 
   const getDifficultyClasses = (difficulty: string) => {
     switch (difficulty) {
-      case 'Easy': return 'bg-green-600/90 text-white border border-green-500/60 px-3 py-1 rounded-full text-xs font-medium';
-      case 'Medium': return 'bg-amber-600/90 text-white border border-amber-500/60 px-3 py-1 rounded-full text-xs font-medium';
-      case 'Hard': return 'bg-red-600/90 text-white border border-red-500/60 px-3 py-1 rounded-full text-xs font-medium';
-      default: return 'bg-gray-600/90 text-white border border-gray-500/60 px-3 py-1 rounded-full text-xs font-medium';
+      case 'Easy': return 'bg-green-600/90 text-white border border-green-500/60 px-2 py-1 sm:px-3 sm:py-1 rounded-full text-xs font-medium';
+      case 'Medium': return 'bg-amber-600/90 text-white border border-amber-500/60 px-2 py-1 sm:px-3 sm:py-1 rounded-full text-xs font-medium';
+      case 'Hard': return 'bg-red-600/90 text-white border border-red-500/60 px-2 py-1 sm:px-3 sm:py-1 rounded-full text-xs font-medium';
+      default: return 'bg-gray-600/90 text-white border border-gray-500/60 px-2 py-1 sm:px-3 sm:py-1 rounded-full text-xs font-medium';
     }
   };
 
@@ -86,15 +87,14 @@ const QuestionCard: React.FC<QuestionCardProps> = ({
 
   return (
     <div
-      className={`p-6 hover:bg-gray-700/30 dark:hover:bg-gray-800/30 transition-all duration-300 ${
+      className={`p-3 sm:p-4 lg:p-6 hover:bg-gray-700/30 dark:hover:bg-gray-800/30 transition-all duration-300 ${
         isSelected ? 'bg-cyan-500/10 border-l-4 border-cyan-500' : ''
       }`}
       style={{ animationDelay: `${qIndex * 50}ms` }}
     >
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between">
         <div className="flex-1">
-          <div className="flex items-center space-x-3 mb-2">
-
+          <div className="flex items-center flex-wrap gap-2 sm:space-x-3 mb-2">
             {showBulkActions && onToggleSelect && (
               <input
                 type="checkbox"
@@ -104,14 +104,14 @@ const QuestionCard: React.FC<QuestionCardProps> = ({
               />
             )}
             
-            <span className="text-sm font-mono text-gray-500 dark:text-gray-400">
+            <span className="text-xs sm:text-sm font-mono text-gray-500 dark:text-gray-400">
               #{question.questionId}
             </span>
             <span className={getDifficultyClasses(question.difficulty)}>
               {question.difficulty}
             </span>
             {question.isCompleted && (
-              <CheckCircle size={16} className="text-green-400" />
+              <CheckCircle size={14} className="text-green-400 sm:w-4 sm:h-4" />
             )}
             
             {question.timeSpent && (
@@ -130,22 +130,22 @@ const QuestionCard: React.FC<QuestionCardProps> = ({
           </div>
           
           <div className="flex items-start gap-3">
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
               <h3 
-                className="text-lg font-medium text-gray-100 dark:text-gray-200 mb-2 cursor-pointer hover:text-cyan-400 transition-colors"
+                className="text-base sm:text-lg font-medium text-gray-100 dark:text-gray-200 mb-2 cursor-pointer hover:text-cyan-400 transition-colors leading-tight"
                 onClick={() => onShowDetails?.(question)}
               >
                 {question.title}
               </h3>
               
               {question.description && (
-                <p className="text-sm text-gray-400 mb-3 line-clamp-2">
+                <p className="text-xs sm:text-sm text-gray-400 mb-3 line-clamp-2">
                   {question.description.substring(0, 120)}...
                 </p>
               )}
               
               {question.tags && question.tags.length > 0 && (
-                <div className="flex flex-wrap gap-2 mb-3">
+                <div className="flex flex-wrap gap-1 sm:gap-2 mb-3">
                   {question.tags.map((tag, tagIndex) => (
                     <span
                       key={tagIndex}
@@ -158,7 +158,6 @@ const QuestionCard: React.FC<QuestionCardProps> = ({
                 </div>
               )}
 
- 
               {question.hints && question.hints.length > 0 && (
                 <div className="mb-3">
                   <button
@@ -168,8 +167,8 @@ const QuestionCard: React.FC<QuestionCardProps> = ({
                     {showHint ? 'Hide Hint' : 'Show Hint'} ({question.hints.length})
                   </button>
                   {showHint && (
-                    <div className="mt-2 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
-                      <p className="text-sm text-yellow-300">
+                    <div className="mt-2 p-2 sm:p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+                      <p className="text-xs sm:text-sm text-yellow-300">
                         💡 {question.hints[0]}
                       </p>
                     </div>
@@ -180,39 +179,39 @@ const QuestionCard: React.FC<QuestionCardProps> = ({
           </div>
         </div>
         
-        <div className="flex items-center space-x-2 ml-4">
+        <div className="flex items-center justify-end sm:justify-start gap-1 sm:space-x-2 sm:ml-4 mt-3 sm:mt-0">
           {onShowDetails && (
             <button
               onClick={() => onShowDetails(question)}
-              className="p-2 text-gray-400 hover:text-cyan-400 hover:bg-cyan-500/10 rounded-lg transition-all duration-300"
+              className="p-1.5 sm:p-2 text-gray-400 hover:text-cyan-400 hover:bg-cyan-500/10 rounded-lg transition-all duration-300"
               title="View details"
             >
-              <Eye size={16} />
+              <Eye size={14} className="sm:w-4 sm:h-4" />
             </button>
           )}
 
           <button
             onClick={() => onToggleProgress(question.id)}
-            className={`p-2 rounded-lg transition-all duration-300 ${
+            className={`p-1.5 sm:p-2 rounded-lg transition-all duration-300 ${
               question.isCompleted 
                 ? 'text-green-400 hover:text-green-300 hover:bg-green-500/10' 
                 : 'text-gray-400 hover:text-green-400 hover:bg-green-500/10'
             }`}
             title={question.isCompleted ? "Mark as incomplete" : "Mark as complete"}
           >
-            <CheckCircle size={16} />
+            <CheckCircle size={14} className="sm:w-4 sm:h-4" />
           </button>
           
           <button
             onClick={() => onToggleBookmark(question.id)}
-            className={`p-2 rounded-lg transition-all duration-300 ${
+            className={`p-1.5 sm:p-2 rounded-lg transition-all duration-300 ${
               question.isBookmarked 
                 ? 'text-blue-400 hover:text-blue-300 hover:bg-blue-500/10' 
                 : 'text-gray-400 hover:text-blue-400 hover:bg-blue-500/10'
             }`}
             title={question.isBookmarked ? "Remove bookmark" : "Add bookmark"}
           >
-            {question.isBookmarked ? <BookmarkCheck size={16} /> : <Bookmark size={16} />}
+            {question.isBookmarked ? <BookmarkCheck size={14} className="sm:w-4 sm:h-4" /> : <Bookmark size={14} className="sm:w-4 sm:h-4" />}
           </button>
           
           {question.ytLink && (
@@ -220,10 +219,10 @@ const QuestionCard: React.FC<QuestionCardProps> = ({
               href={question.ytLink}
               target="_blank"
               rel="noopener noreferrer"
-              className="p-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-all duration-300"
+              className="p-1.5 sm:p-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-all duration-300"
               title="Watch on YouTube"
             >
-              <Play size={16} />
+              <Play size={14} className="sm:w-4 sm:h-4" />
             </a>
           )}
           
@@ -232,10 +231,10 @@ const QuestionCard: React.FC<QuestionCardProps> = ({
               href={question.p1Link}
               target="_blank"
               rel="noopener noreferrer"
-              className="p-2 text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10 rounded-lg transition-all duration-300"
+              className="p-1.5 sm:p-2 text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10 rounded-lg transition-all duration-300"
               title="Problem Link 1"
             >
-              <ExternalLink size={16} />
+              <ExternalLink size={14} className="sm:w-4 sm:h-4" />
             </a>
           )}
           
@@ -244,10 +243,10 @@ const QuestionCard: React.FC<QuestionCardProps> = ({
               href={question.p2Link}
               target="_blank"
               rel="noopener noreferrer"
-              className="p-2 text-purple-400 hover:text-purple-300 hover:bg-purple-500/10 rounded-lg transition-all duration-300"
+              className="p-1.5 sm:p-2 text-purple-400 hover:text-purple-300 hover:bg-purple-500/10 rounded-lg transition-all duration-300"
               title="Problem Link 2"
             >
-              <BookOpen size={16} />
+              <BookOpen size={14} className="sm:w-4 sm:h-4" />
             </a>
           )}
         </div>
