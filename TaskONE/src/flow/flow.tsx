@@ -121,15 +121,10 @@ const FlowPage: React.FC = () => {
   const recognitionRef = useRef<any>(null);
   const isFetchingRef = useRef(false); 
   const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
-  const [questionsPerPage, setQuestionsPerPage] = useState(20);
+  const [questionsPerPage] = useState(20);
 
 
   const QUESTIONS_PER_PAGE = useMemo(() => questionsPerPage, [questionsPerPage]);
-
-  const handleQuestionsPerPageChange = useCallback((value: number) => {
-    setQuestionsPerPage(value);
-    setPagination(prev => ({ ...prev, currentPage: 1 }));
-  }, []);
 
   useEffect(() => {
     if (!currentUser) {
